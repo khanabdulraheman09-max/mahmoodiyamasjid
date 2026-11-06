@@ -179,7 +179,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               <Clock className="w-5 h-5 text-[#D4AF37]" />
               <span>Today's Official Salah & Jamaat Timetable</span>
             </h3>
-            <p className="text-xs text-gray-600">Sawangi, Chhatrapati Sambhajinagar (Hanafi Asr Method)</p>
+            <p className="text-xs text-gray-600">Darussalam Society, Sawangi, Chhatrapati Sambhajinagar</p>
           </div>
           <button
             onClick={() => onNavigate('prayer_times')}

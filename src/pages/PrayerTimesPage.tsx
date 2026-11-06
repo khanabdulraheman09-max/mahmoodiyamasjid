@@ -160,7 +160,7 @@ export const PrayerTimesPage: React.FC = () => {
                 <Info className="w-4 h-4 text-emerald-600" />
                 <span>Sunrise (Ishraq begins): <strong>{currentSchedule.sunriseTime}</strong></span>
               </div>
-              <span>Hanafi Juristic Method (Asr Shadow 2x) Active</span>
+              <span>Darussalam Society, Sawangi</span>
             </div>
           </div>
 
