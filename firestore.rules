@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for Role-Based Access Control (RBAC)
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isPrimaryAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'primary_admin' || 
+        request.auth.token.email == 'admin@masjidmehmoodiya.org'
+      );
+    }
+
+    function isSecondaryAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'secondary_admin';
+    }
+
+    function isAdmin() {
+      return isPrimaryAdmin() || isSecondaryAdmin();
+    }
+
+    function isTeacher() {
+      return isAuthenticated() && (request.auth.token.role == 'teacher' || isAdmin());
+    }
+
+    function isParent() {
+      return isAuthenticated() && request.auth.token.role == 'parent';
+    }
+
+    function isParentOf(studentId) {
+      return isAuthenticated() && (
+        isAdmin() || 
+        (isParent() && resource.data.parentId == request.auth.uid) ||
+        (isParent() && request.auth.token.linkedStudentIds != null && studentId in request.auth.token.linkedStudentIds)
+      );
+    }
+
+    // 1. Mosque Settings & Timetable Configurations (Public read, Admin write)
+    match /masjid_settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 2. Official Daily Prayer Schedules (Public read, Admin write)
+    match /prayer_schedules/{dateKey} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 3. Announcements (Public can read public announcements; Admins can write)
+    match /announcements/{announcementId} {
+      allow read: if resource.data.isPublic == true || (isAuthenticated() && !isParent());
+      allow write: if isAdmin();
+    }
+
+    // 4. Students Profiles (Teachers & Admins can read/write; Parents can only read their child)
+    match /students/{studentId} {
+      allow read: if isTeacher() || isParentOf(studentId);
+      allow create, update: if isAdmin();
+      allow delete: if isPrimaryAdmin();
+    }
+
+    // 5. Daily Attendance (Teachers can create/update; Parents can read only their child; Admins can delete/manage)
+    match /attendance/{attendanceId} {
+      allow read: if isTeacher() || isParentOf(resource.data.studentId);
+      allow create, update: if isTeacher();
+      allow delete: if isAdmin();
+    }
+
+    // 6. Monthly Progress Reports (Teachers can create/update; Parents can read their child)
+    match /monthly_progress/{reportId} {
+      allow read: if isTeacher() || isParentOf(resource.data.studentId);
+      allow create, update: if isTeacher();
+      allow delete: if isAdmin();
+    }
+
+    // 7. Oral Examinations (Teachers can create/update; Parents can read their child)
+    match /oral_examinations/{examId} {
+      allow read: if isTeacher() || isParentOf(resource.data.studentId);
+      allow create, update: if isTeacher();
+      allow delete: if isAdmin();
+    }
+
+    // 8. Islamic Content (Calendar, Ramadan schedules, Duas, Quizzes - Public read, Admin write)
+    match /islamic_calendar/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /ramadan_schedules/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /quiz_questions/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 9. Audit Logs (Admin only)
+    match /audit_logs/{logId} {
+      allow read: if isPrimaryAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Immutable audit log
+    }
+  }
+}

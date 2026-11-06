@@ -1,0 +1,29 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (request.auth.token.role == 'primary_admin' || request.auth.token.role == 'secondary_admin');
+    }
+
+    function isTeacher() {
+      return isAuthenticated() && (request.auth.token.role == 'teacher' || isAdmin());
+    }
+
+    // Student photos & report PDFs
+    match /students/{studentId}/{allPaths=**} {
+      allow read: if isTeacher() || (isAuthenticated() && request.auth.token.role == 'parent');
+      allow write: if isTeacher();
+    }
+
+    // Public Masjid assets (announcement images, banners)
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

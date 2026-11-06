@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background Circle with Gold Border -->
+  <circle cx="100" cy="100" r="90" fill="#075B3A" />
+  <circle cx="100" cy="100" r="86" fill="none" stroke="#D4AF37" stroke-width="3" />
+
+  <!-- Arch Outer Silhouette -->
+  <path d="M45,160 L45,100 Q45,65 100,45 Q155,65 155,100 L155,160 Z" fill="#043A25" stroke="#D4AF37" stroke-width="2" />
+
+  <!-- Left Minaret -->
+  <path d="M52,155 L52,75 L50,75 L50,70 L58,70 L58,75 L56,75 L56,155 Z" fill="#FFFFFF" />
+  <path d="M50,70 Q54,60 54,54 Q54,60 58,70 Z" fill="#D4AF37" />
+  <line x1="54" y1="54" x2="54" y2="48" stroke="#D4AF37" stroke-width="1.5" />
+
+  <!-- Right Minaret -->
+  <path d="M144,155 L144,75 L142,75 L142,70 L150,70 L150,75 L148,75 L148,155 Z" fill="#FFFFFF" />
+  <path d="M142,70 Q146,60 146,54 Q146,60 150,70 Z" fill="#D4AF37" />
+  <line x1="146" y1="54" x2="146" y2="48" stroke="#D4AF37" stroke-width="1.5" />
+
+  <!-- Central Grand Mosque Dome -->
+  <path d="M70,135 Q70,82 100,70 Q130,82 130,135 Z" fill="#FFFFFF" />
+
+  <!-- Inner Dome Islamic Arch Cutout -->
+  <path d="M80,155 L80,128 Q80,105 100,98 Q120,105 120,128 L120,155 Z" fill="#075B3A" />
+
+  <!-- Central Gold Finial with Crescent -->
+  <line x1="100" y1="70" x2="100" y2="54" stroke="#D4AF37" stroke-width="2" />
+  <path d="M97,52 A5,5 0 1,1 104,47 A4,4 0 1,0 97,52 Z" fill="#D4AF37" />
+
+  <!-- 8-Point Islamic Star (Khatam) -->
+  <polygon points="100,110 103,117 110,120 103,123 100,130 97,123 90,120 97,117" fill="#D4AF37" />
+
+  <!-- Base Foundation Line -->
+  <line x1="40" y1="160" x2="160" y2="160" stroke="#D4AF37" stroke-width="2.5" />
+</svg>
