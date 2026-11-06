@@ -118,9 +118,8 @@ export const PrayerTimesPage: React.FC = () => {
                 <thead>
                   <tr className="bg-[#E4F3EC] text-[#075B3A] text-xs uppercase tracking-wider font-bold">
                     <th className="py-3 px-6">Salah</th>
-                    <th className="py-3 px-6">Solar Time</th>
-                    <th className="py-3 px-6">Official Adhan</th>
-                    <th className="py-3 px-6">Jamaat Congregation</th>
+                    <th className="py-3 px-6">Official Adhan (اذان)</th>
+                    <th className="py-3 px-6">Jamaat Congregation (جماعت)</th>
                     {isAdmin && <th className="py-3 px-6 text-right">Admin Action</th>}
                   </tr>
                 </thead>
@@ -131,7 +130,6 @@ export const PrayerTimesPage: React.FC = () => {
                         <div className="font-bold text-gray-900">{prayer.name}</div>
                         <div className="text-xs font-arabic text-[#AA8A22]">{prayer.arabicName}</div>
                       </td>
-                      <td className="py-4 px-6 text-gray-500 font-mono text-xs">{prayer.calculatedTime}</td>
                       <td className="py-4 px-6 font-semibold text-gray-800">{prayer.officialAdhanTime}</td>
                       <td className="py-4 px-6">
                         <span className="inline-block bg-[#075B3A] text-white font-bold text-xs px-3 py-1 rounded-lg shadow-sm">
@@ -271,19 +269,7 @@ export const PrayerTimesPage: React.FC = () => {
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div>
                 <label className="text-xs font-bold text-gray-700 block mb-1">
-                  Solar Calculated Time (Reference)
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value={editingPrayer.calculatedTime}
-                  className="w-full bg-gray-100 text-gray-500 border border-gray-200 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">
-                  Official Adhan Time (hh:mm AM/PM)
+                  Official Adhan Time (اذان کا وقت: hh:mm AM/PM)
                 </label>
                 <input
                   type="text"
