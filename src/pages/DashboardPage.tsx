@@ -100,6 +100,77 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         </div>
       )}
 
+      {/* 2.5 Admin & Teacher Maktab Action Center */}
+      {(currentUser.role === 'PRIMARY_ADMIN' || currentUser.role === 'SECONDARY_ADMIN' || currentUser.role === 'TEACHER') && (
+        <div className="bg-gradient-to-r from-[#FFF9E6] via-white to-[#E4F3EC] p-5 rounded-3xl border-2 border-[#D4AF37] shadow-md space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#075B3A] text-white">
+                  Maktab Admin Panel
+                </span>
+                <span className="text-xs font-bold text-gray-700">
+                  {currentUser.displayName}
+                </span>
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-[#075B3A] mt-1">
+                اسٹوڈنٹ کی پرفارمنس اور مکتب کا انتظام (Student Records & Performance)
+              </h3>
+              <p className="text-xs text-gray-600">
+                یہاں سے آپ طلباء کی ماہانہ کارکردگی، حاضری اور زبانی امتحان کے نمبر باآسانی درج کر سکتے ہیں۔
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigate('maktab')}
+              className="px-4 py-2 bg-[#075B3A] text-white text-xs font-bold rounded-xl hover:bg-[#043A25] shadow-sm transition-all self-start sm:self-auto"
+            >
+              مکتب پورٹل کھولیں →
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button
+              onClick={() => onNavigate('maktab')}
+              className="flex items-center space-x-3 p-3.5 bg-white rounded-2xl border border-[#D4AF37]/60 hover:border-[#075B3A] hover:shadow-md transition-all text-left"
+            >
+              <div className="p-2.5 rounded-xl bg-[#E4F3EC] text-[#075B3A]">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-gray-900 block">ماہانہ کارکردگی درج کریں</span>
+                <span className="text-[11px] text-gray-500">Add Monthly Progress</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => onNavigate('maktab')}
+              className="flex items-center space-x-3 p-3.5 bg-white rounded-2xl border border-[#D4AF37]/60 hover:border-[#075B3A] hover:shadow-md transition-all text-left"
+            >
+              <div className="p-2.5 rounded-xl bg-[#E4F3EC] text-[#075B3A]">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-gray-900 block">روزانہ حاضری لگائیں</span>
+                <span className="text-[11px] text-gray-500">Mark Daily Attendance</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => onNavigate('maktab')}
+              className="flex items-center space-x-3 p-3.5 bg-white rounded-2xl border border-[#D4AF37]/60 hover:border-[#075B3A] hover:shadow-md transition-all text-left"
+            >
+              <div className="p-2.5 rounded-xl bg-[#E4F3EC] text-[#075B3A]">
+                <GraduationCap className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-gray-900 block">زبانی امتحان کے نمبر درج کریں</span>
+                <span className="text-[11px] text-gray-500">Record Oral Exam Marks</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 3. Today's Salah & Jamaat Schedule Card */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="bg-[#E4F3EC] px-6 py-4 border-b border-[#075B3A]/20 flex items-center justify-between">
