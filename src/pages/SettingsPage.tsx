@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { usePrayer } from '../context/PrayerContext';
 import { useAuth } from '../context/AuthContext';
-import { Settings, MapPin, Compass, Shield, User, Check, Globe } from 'lucide-react';
+import { Settings, MapPin, Shield, User, Check, Globe } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
-  const { latitude, longitude, updateCoordinates, isHanafi, setIsHanafi } = usePrayer();
+  const { latitude, longitude, updateCoordinates } = usePrayer();
   const { currentUser, isAdmin } = useAuth();
 
   const [latInput, setLatInput] = useState(latitude.toString());
@@ -27,7 +27,7 @@ export const SettingsPage: React.FC = () => {
           <span>Application & Mosque Settings</span>
         </h2>
         <p className="text-xs sm:text-sm text-gray-500 mt-1">
-          Configure prayer calculation juristic methods, GPS coordinates, and administrative options
+          Configure mosque GPS coordinates and official administration details
         </p>
       </div>
 
@@ -102,58 +102,7 @@ export const SettingsPage: React.FC = () => {
         )}
       </div>
 
-      {/* 2. Asr Juristic Calculation Method */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
-        <div className="flex items-start space-x-3">
-          <div className="p-2.5 rounded-xl bg-[#FFF9E6] text-[#AA8A22]">
-            <Compass className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-gray-900">Asr Juristic Calculation Method</h3>
-            <p className="text-xs text-gray-500">
-              Select between the Hanafi school (shadow 2x) or Shafi / Standard school (shadow 1x)
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-          <button
-            onClick={() => setIsHanafi(true)}
-            className={`p-4 rounded-xl border text-left transition-all ${
-              isHanafi
-                ? 'border-[#075B3A] bg-[#E4F3EC] shadow-sm'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="text-sm font-bold text-gray-900 flex items-center justify-between">
-              <span>Hanafi Method (Standard)</span>
-              {isHanafi && <Check className="w-4 h-4 text-[#075B3A]" />}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Shadow length factor: 2x (Standard in Indian Subcontinent)
-            </div>
-          </button>
-
-          <button
-            onClick={() => setIsHanafi(false)}
-            className={`p-4 rounded-xl border text-left transition-all ${
-              !isHanafi
-                ? 'border-[#075B3A] bg-[#E4F3EC] shadow-sm'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="text-sm font-bold text-gray-900 flex items-center justify-between">
-              <span>Shafi / Maliki / Hanbali</span>
-              {!isHanafi && <Check className="w-4 h-4 text-[#075B3A]" />}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Shadow length factor: 1x
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Official Identity & About Info */}
+      {/* 2. Official Identity & About Info */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
         <h3 className="text-base font-bold text-[#075B3A] flex items-center space-x-2">
           <Globe className="w-5 h-5 text-[#D4AF37]" />
@@ -162,38 +111,48 @@ export const SettingsPage: React.FC = () => {
 
         <div className="divide-y divide-gray-100 text-xs">
           <div className="py-2.5 flex justify-between">
-            <span className="text-gray-500">Official Mosque English Name:</span>
+            <span className="text-gray-500 font-medium">Official Mosque English Name:</span>
             <strong className="text-gray-900">Masjid Mehmoodiya – Sawangi</strong>
           </div>
           <div className="py-2.5 flex justify-between">
-            <span className="text-gray-500">Official Urdu Name:</span>
-            <strong className="text-[#075B3A] font-arabic text-sm">مسجد محمودیہ</strong>
+            <span className="text-gray-500 font-medium">Official Urdu Name:</span>
+            <strong className="text-[#075B3A] font-arabic text-base">مسجد محمودیہ</strong>
           </div>
           <div className="py-2.5 flex justify-between">
-            <span className="text-gray-500">Developer Display Name:</span>
+            <span className="text-gray-500 font-medium">Developer Display Name:</span>
             <strong className="text-gray-900">Abdur Rahman Khan</strong>
           </div>
           <div className="py-2.5 flex justify-between">
-            <span className="text-gray-500">Primary Administrator:</span>
+            <span className="text-gray-500 font-medium">Primary Administrator:</span>
             <strong className="text-gray-900">Abdur Rahman Khan</strong>
           </div>
           <div className="py-2.5 flex justify-between">
-            <span className="text-gray-500">Secondary Administrator:</span>
-            <strong className="text-gray-900">Authorized Masjid Trustee</strong>
+            <span className="text-gray-500 font-medium">Secondary Administrator:</span>
+            <span className="text-gray-700">One Authorized Masjid Trustee</span>
           </div>
           <div className="py-2.5 flex justify-between">
-            <span className="text-gray-500">Location:</span>
-            <strong className="text-gray-900">Darussalam Society, Sawangi, Chhatrapati Sambhajinagar, Maharashtra, India</strong>
+            <span className="text-gray-500 font-medium">Timezone & Locale:</span>
+            <span className="text-gray-700">Asia/Kolkata (IST, UTC+05:30)</span>
           </div>
           <div className="py-2.5 flex justify-between">
-            <span className="text-gray-500">Timezone:</span>
-            <strong className="text-gray-900">Asia/Kolkata (IST, UTC+05:30)</strong>
-          </div>
-          <div className="py-2.5 flex justify-between">
-            <span className="text-gray-500">Web Technology Stack:</span>
-            <strong className="text-gray-900">React + TypeScript + Vite + Tailwind CSS + PWA + Firebase</strong>
+            <span className="text-gray-500 font-medium">Platform & Target Distribution:</span>
+            <span className="text-gray-700">Android Application & PWA Platform (Google Play Ready)</span>
           </div>
         </div>
+      </div>
+
+      {/* 3. Role Access Info */}
+      <div className="bg-gradient-to-r from-[#FFF9E6] to-white p-6 rounded-2xl border border-[#D4AF37]/50 shadow-sm space-y-2">
+        <h4 className="text-sm font-bold text-[#075B3A] flex items-center space-x-2">
+          <Shield className="w-4 h-4 text-[#D4AF37]" />
+          <span>Active Role Access Level</span>
+        </h4>
+        <p className="text-xs text-gray-600">
+          You are currently accessing this system as: <strong>{currentUser.displayName}</strong> ({currentUser.role}).
+        </p>
+        <p className="text-[11px] text-gray-500">
+          To test different permissions (Admin, Teacher, Parent, Public), use the role switcher in the top-right header menu.
+        </p>
       </div>
     </div>
   );

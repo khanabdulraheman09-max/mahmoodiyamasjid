@@ -5,7 +5,7 @@ import { Clock, Calendar, Edit3, ShieldAlert, Check, X, Info } from 'lucide-reac
 import { PrayerTimeItem } from '../types';
 
 export const PrayerTimesPage: React.FC = () => {
-  const { currentSchedule, getWeeklySchedules, getMonthlySchedules, saveManualOverride, isHanafi, setIsHanafi } = usePrayer();
+  const { currentSchedule, getWeeklySchedules, getMonthlySchedules, saveManualOverride } = usePrayer();
   const { isAdmin, currentUser } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'today' | 'weekly' | 'monthly'>('today');

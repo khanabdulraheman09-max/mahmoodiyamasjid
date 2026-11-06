@@ -10,8 +10,6 @@ interface PrayerContextType {
   hijriDateStr: string;
   nextPrayer: PrayerTimeItem | null;
   countdownStr: string;
-  isHanafi: boolean;
-  setIsHanafi: (val: boolean) => void;
   latitude: number;
   longitude: number;
   updateCoordinates: (lat: number, lng: number) => void;
@@ -28,7 +26,6 @@ const PrayerContext = createContext<PrayerContextType>({} as any);
 export const PrayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [latitude, setLatitude] = useState<number>(19.9248);
   const [longitude, setLongitude] = useState<number>(75.3670);
-  const [isHanafi, setIsHanafi] = useState<boolean>(true);
   const [jamaatLeadMinutes, setJamaatLeadMinutes] = useState<number>(15);
 
   const [currentTimeStr, setCurrentTimeStr] = useState<string>('');
@@ -59,7 +56,7 @@ export const PrayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const generateScheduleForDate = (date: Date): DailyPrayerSchedule => {
     const dateKey = date.toISOString().split('T')[0];
-    const calculated = SolarPrayerCalculator.calculate(date, latitude, longitude, 5.5, isHanafi);
+    const calculated = SolarPrayerCalculator.calculate(date, latitude, longitude, 5.5, 2.0);
     const dayOverrides = manualOverrides[dateKey] || {};
 
     // Approved default official Jamaat schedule for Sawangi
@@ -183,7 +180,7 @@ export const PrayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, [latitude, longitude, isHanafi, manualOverrides, alarmToggles]);
+  }, [latitude, longitude, manualOverrides, alarmToggles]);
 
   const saveManualOverride = (prayerName: string, newAdhan: string, newJamaat: string) => {
     const todayKey = new Date().toISOString().split('T')[0];
@@ -233,8 +230,6 @@ export const PrayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         hijriDateStr,
         nextPrayer,
         countdownStr,
-        isHanafi,
-        setIsHanafi,
         latitude,
         longitude,
         updateCoordinates,

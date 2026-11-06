@@ -23,17 +23,14 @@ console.log('===============================================================');
 // 1. Solar Prayer Calculations for Sawangi (19.9248° N, 75.3670° E)
 console.log('\n-- 1. Verifying Solar Calculation Engine --');
 const testDate = new Date(2026, 10, 6);
-const timingsHanafi = SolarPrayerCalculator.calculate(testDate, 19.9248, 75.3670, 5.5, true);
+const timings = SolarPrayerCalculator.calculate(testDate, 19.9248, 75.3670, 5.5, 2.0);
 
-check(timingsHanafi.fajr.length > 0, `Fajr calculated: ${timingsHanafi.fajr}`);
-check(timingsHanafi.sunrise.length > 0, `Sunrise calculated: ${timingsHanafi.sunrise}`);
-check(timingsHanafi.dhuhr.length > 0, `Dhuhr calculated: ${timingsHanafi.dhuhr}`);
-check(timingsHanafi.asr.length > 0, `Hanafi Asr calculated: ${timingsHanafi.asr}`);
-check(timingsHanafi.maghrib.length > 0, `Maghrib calculated: ${timingsHanafi.maghrib}`);
-check(timingsHanafi.isha.length > 0, `Isha calculated: ${timingsHanafi.isha}`);
-
-const timingsShafi = SolarPrayerCalculator.calculate(testDate, 19.9248, 75.3670, 5.5, false);
-check(timingsShafi.asr !== timingsHanafi.asr, `Shafi Asr (${timingsShafi.asr}) differs from Hanafi Asr (${timingsHanafi.asr})`);
+check(timings.fajr.length > 0, `Fajr calculated: ${timings.fajr}`);
+check(timings.sunrise.length > 0, `Sunrise calculated: ${timings.sunrise}`);
+check(timings.dhuhr.length > 0, `Dhuhr calculated: ${timings.dhuhr}`);
+check(timings.asr.length > 0, `Asr calculated: ${timings.asr}`);
+check(timings.maghrib.length > 0, `Maghrib calculated: ${timings.maghrib}`);
+check(timings.isha.length > 0, `Isha calculated: ${timings.isha}`);
 
 // 2. Hijri Calendar & Moon Adjustment
 console.log('\n-- 2. Verifying Islamic Hijri Calendar --');

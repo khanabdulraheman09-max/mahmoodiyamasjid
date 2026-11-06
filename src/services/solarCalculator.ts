@@ -16,7 +16,7 @@ export class SolarPrayerCalculator {
     latitude: number = 19.9248,
     longitude: number = 75.3670,
     timezoneHours: number = 5.5,
-    isHanafi: boolean = true,
+    shadowFactor: number = 2.0,
     fajrAngle: number = 18.0,
     ishaAngle: number = 18.0
   ): SolarTimings {
@@ -74,8 +74,8 @@ export class SolarPrayerCalculator {
     const ishaHourAngle = this.calculateHourAngle(ishaAngle, latitude, declination);
     const isha = transit + ishaHourAngle;
 
-    // Asr: Shadow ratio t = 2 (Hanafi) or t = 1 (Shafi)
-    const t = isHanafi ? 2.0 : 1.0;
+    // Asr: Standard shadow ratio
+    const t = shadowFactor;
     const deltaRad = this.degToRad(Math.abs(latitude - declination));
     const asrAltitude = this.radToDeg(Math.atan(1.0 / (t + Math.tan(deltaRad))));
     const asrHourAngle = this.calculateHourAngle(-asrAltitude, latitude, declination);
