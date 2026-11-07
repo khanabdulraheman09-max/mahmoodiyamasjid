@@ -23,7 +23,7 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const { currentSchedule, currentTimeStr, currentDateStr, hijriDateStr, nextPrayer, countdownStr } = usePrayer();
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
 
   const latestAnnouncement = ANNOUNCEMENTS[0];
 
@@ -100,8 +100,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         </div>
       )}
 
-      {/* 2.5 Admin & Teacher Maktab Action Center */}
-      {(currentUser.role === 'PRIMARY_ADMIN' || currentUser.role === 'SECONDARY_ADMIN' || currentUser.role === 'TEACHER') && (
+      {/* 2.5 Admin Maktab Action Center */}
+      {isAdmin && (
         <div className="bg-gradient-to-r from-[#FFF9E6] via-white to-[#E4F3EC] p-5 rounded-3xl border-2 border-[#D4AF37] shadow-md space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -110,7 +110,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                   Maktab Admin Panel
                 </span>
                 <span className="text-xs font-bold text-gray-700">
-                  {currentUser.displayName}
+                  {currentUser?.displayName || 'Admin'}
                 </span>
               </div>
               <h3 className="text-base sm:text-lg font-bold text-[#075B3A] mt-1">

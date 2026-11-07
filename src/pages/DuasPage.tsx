@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Heart, Search, BookOpen, Copy, Check } from 'lucide-react';
+import { Heart, Search, BookOpen, Copy, Check, Share2 } from 'lucide-react';
 import { DUAS_LIST } from '../data/mockData';
+import { NativeService } from '../services/nativeService';
 
 export const DuasPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -19,10 +20,18 @@ export const DuasPage: React.FC = () => {
     return matchesCat && matchesSearch;
   });
 
-  const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
+  const handleCopy = async (id: string, text: string) => {
+    await NativeService.copyText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2500);
+  };
+
+  const handleShareDua = (dua: (typeof DUAS_LIST)[0]) => {
+    NativeService.share({
+      title: dua.title,
+      text: `${dua.title}\n\n${dua.arabicText}\n\n${dua.englishTranslation}\n\nReference: ${dua.reference}\n\n— Shared via Masjid Mehmoodiya Official App`,
+      dialogTitle: 'Share Supplication',
+    });
   };
 
   return (
@@ -83,13 +92,24 @@ export const DuasPage: React.FC = () => {
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E4F3EC] text-[#075B3A] uppercase tracking-wide">
                     {dua.category}
                   </span>
-                  <button
-                    onClick={() => handleCopy(dua.id, `${dua.arabicText}\n\n${dua.englishTranslation}\n(${dua.reference})`)}
-                    className="text-gray-400 hover:text-[#075B3A] p-1 rounded-lg"
-                    title="Copy Dua"
-                  >
-                    {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                  </button>
+                  <div className="flex items-center space-x-1">
+                    <button
+                      type="button"
+                      onClick={() => handleShareDua(dua)}
+                      className="text-gray-400 hover:text-[#075B3A] p-1 rounded-lg active:scale-95 transition-all"
+                      title="Share Dua"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(dua.id, `${dua.arabicText}\n\n${dua.englishTranslation}\n(${dua.reference})`)}
+                      className="text-gray-400 hover:text-[#075B3A] p-1 rounded-lg active:scale-95 transition-all"
+                      title="Copy Dua"
+                    >
+                      {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <h3 className="text-base font-bold text-gray-900 mb-3">{dua.title}</h3>

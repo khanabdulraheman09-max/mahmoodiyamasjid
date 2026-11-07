@@ -1,18 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePrayer } from '../context/PrayerContext';
 import { useAuth } from '../context/AuthContext';
-import { Clock, Calendar, Edit3, ShieldAlert, Check, X, Info } from 'lucide-react';
+import { useNavigation } from '../context/NavigationContext';
+import { NativeService } from '../services/nativeService';
+import { Clock, Calendar, Edit3, ShieldAlert, Check, X, Info, Share2 } from 'lucide-react';
 import { PrayerTimeItem } from '../types';
 
 export const PrayerTimesPage: React.FC = () => {
   const { currentSchedule, getWeeklySchedules, getMonthlySchedules, saveManualOverride } = usePrayer();
   const { isAdmin, currentUser } = useAuth();
+  const { registerBackHandler } = useNavigation();
 
   const [activeTab, setActiveTab] = useState<'today' | 'weekly' | 'monthly'>('today');
   const [editingPrayer, setEditingPrayer] = useState<PrayerTimeItem | null>(null);
   const [editAdhan, setEditAdhan] = useState<string>('');
   const [editJamaat, setEditJamaat] = useState<string>('');
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Close prayer edit modal on Android back button
+  useEffect(() => {
+    if (!editingPrayer) return;
+    return registerBackHandler(
+      'prayer_times_edit_modal',
+      () => {
+        setEditingPrayer(null);
+        return true;
+      },
+      90
+    );
+  }, [editingPrayer, registerBackHandler]);
+
+  const handleShareSchedule = () => {
+    let text = `🕌 *Masjid Mehmoodiya – Salah Schedule*\nSawangi, Chhatrapati Sambhajinagar\n\n`;
+    if (currentSchedule?.prayers) {
+      currentSchedule.prayers.forEach((p: PrayerTimeItem) => {
+        text += `• *${p.name}*: Adhan ${p.officialAdhanTime} | Jama'at ${p.jamaatTime}\n`;
+      });
+    }
+    text += `\nShared via Masjid Mehmoodiya Official App`;
+    NativeService.share({
+      title: 'Masjid Mehmoodiya Salah Timetable',
+      text,
+      dialogTitle: 'Share Prayer Schedule',
+    });
+  };
 
   const weeklySchedules = getWeeklySchedules();
   const monthlySchedules = getMonthlySchedules();
@@ -81,6 +112,15 @@ export const PrayerTimesPage: React.FC = () => {
           >
             Monthly Calendar
           </button>
+          <button
+            type="button"
+            onClick={handleShareSchedule}
+            className="flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#E4F3EC] text-[#075B3A] hover:bg-[#d2ede0] border border-[#075B3A]/20 active:scale-95 transition-all"
+            title="Share Today's Timetable"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>Share</span>
+          </button>
         </div>
       </div>
 
@@ -92,7 +132,7 @@ export const PrayerTimesPage: React.FC = () => {
             <span>ADMINISTRATOR MODE: You have permission to update and approve official Adhan & Jamaat timings.</span>
           </div>
           <span className="text-[11px] bg-[#D4AF37] text-[#043A25] font-bold px-2 py-0.5 rounded-full">
-            {currentUser.displayName}
+            {currentUser?.displayName || 'Admin'}
           </span>
         </div>
       )}

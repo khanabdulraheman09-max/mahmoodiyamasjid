@@ -2,89 +2,359 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions for Role-Based Access Control (RBAC)
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (Firebase Auth UID)
+    // Fields:
+    //   - uid: string (required, 1-128 chars, immutable)
+    //   - email: string (required, <= 128 chars)
+    //   - displayName: string (required, 1-100 chars)
+    //   - photoURL: string (optional, <= 500 chars)
+    //   - role: string (required, 'admin' | 'visitor' | 'guest')
+    //   - createdAt: string (optional, <= 50 chars)
+    //   - updatedAt: string (optional, <= 50 chars)
+    //   - linkedStudentIds: list (optional, <= 50 items)
+    //
+    // Collection: masjid_settings
+    // Document ID: {docId} (e.g. 'general_config')
+    // Fields:
+    //   - mosqueNameEnglish, mosqueNameUrdu, location, timezone, primaryAdmin: strings
+    //   - latitude, longitude: numbers
+    //   - lastSyncedAt: string
+    //
+    // Collection: prayer_schedules
+    // Document ID: {dateKey} (e.g. 'YYYY-MM-DD' or 'latest_overrides')
+    //
+    // Collection: announcements
+    // Document ID: {announcementId}
+    // Fields:
+    //   - id: string (required, 1-128 chars)
+    //   - title: string (required, 1-200 chars)
+    //   - content: string (required, 1-5000 chars)
+    //   - category: string (required, <= 50 chars)
+    //   - isPublic: bool (required)
+    //   - date: string (required, <= 50 chars)
+    //   - postedBy: string (required, <= 100 chars)
+    //
+    // Collection: students
+    // Document ID: {studentId}
+    // Fields:
+    //   - id: string (required, 1-128 chars)
+    //   - fullName, fatherName, guardianName, contactNumber, dateOfBirth, address, admissionDate, parentId, emergencyContact: strings
+    //   - arabicName, photoUrl: optional strings
+    //
+    // Collection: attendance
+    // Document ID: {attendanceId}
+    // Fields:
+    //   - id, studentId, date, status ('PRESENT' | 'ABSENT'), markedBy: strings
+    //   - timestamp: number
+    //
+    // Collection: monthly_progress
+    // Document ID: {reportId}
+    // Fields:
+    //   - id, studentId, month, quranReading, tajweedGrade, hifzProgress, islamicStudiesGrade, duasMemorized, teacherRemarks, evaluationDate: strings
+    //   - attendancePercentage: number (0-100)
+    //
+    // Collection: oral_examinations
+    // Document ID: {examId}
+    // Fields:
+    //   - id, studentId, examDate, subject, grade, teacherRemarks: strings
+    //   - marksObtained: number (0-100)
+    //
+    // Collection: islamic_calendar, ramadan_schedules, quiz_questions
+    // Document ID: {docId}
+    //
+    // Collection: audit_logs
+    // Document ID: {logId}
+    // Fields:
+    //   - timestamp: number
+    //   - action: string
+    //   - adminUid: string
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    // Check if request is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    function isPrimaryAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.role == 'primary_admin' || 
-        request.auth.token.email == 'admin@masjidmehmoodiya.org'
-      );
+    // Check if user is anonymous (Firebase Anonymous Auth)
+    function isAnonymous() {
+      return isAuthenticated() &&
+        request.auth.token.firebase.sign_in_provider == 'anonymous';
     }
 
-    function isSecondaryAdmin() {
-      return isAuthenticated() && request.auth.token.role == 'secondary_admin';
+    // Check if user is an authenticated non-anonymous user
+    function isNonAnonymous() {
+      return isAuthenticated() &&
+        request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
 
+    // Admin role check:
+    // 1. Must be authenticated and strictly non-anonymous.
+    // 2. Either token custom claim role is 'admin' OR the user doc in Firestore has role == 'admin'.
     function isAdmin() {
-      return isPrimaryAdmin() || isSecondaryAdmin();
-    }
-
-    function isTeacher() {
-      return isAuthenticated() && (request.auth.token.role == 'teacher' || isAdmin());
-    }
-
-    function isParent() {
-      return isAuthenticated() && request.auth.token.role == 'parent';
-    }
-
-    function isParentOf(studentId) {
-      return isAuthenticated() && (
-        isAdmin() || 
-        (isParent() && resource.data.parentId == request.auth.uid) ||
-        (isParent() && request.auth.token.linkedStudentIds != null && studentId in request.auth.token.linkedStudentIds)
+      return isNonAnonymous() && (
+        request.auth.token.role == 'admin' ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        )
       );
     }
 
-    // 1. Mosque Settings & Timetable Configurations (Public read, Admin write)
+    // Verify immutable fields are unchanged
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // Optional string validator
+    function isValidOptionalString(data, field, minLen, maxLen) {
+      return !(field in data) ||
+        (data[field] is string &&
+         data[field].size() >= minLen &&
+         data[field].size() <= maxLen);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt', 'updatedAt', 'linkedStudentIds']) &&
+        data.keys().hasAll(['uid', 'email', 'displayName', 'role']) &&
+        data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128 &&
+        data.email is string && data.email.size() <= 128 &&
+        data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
+        data.role is string && data.role in ['admin', 'visitor', 'guest'] &&
+        isValidOptionalString(data, 'photoURL', 0, 500) &&
+        isValidOptionalString(data, 'createdAt', 0, 50) &&
+        isValidOptionalString(data, 'updatedAt', 0, 50) &&
+        (!('linkedStudentIds' in data) || (data.linkedStudentIds is list && data.linkedStudentIds.size() <= 50));
+    }
+
+    function isValidMasjidSettings(data) {
+      return data.keys().size() <= 50 &&
+        isValidOptionalString(data, 'mosqueNameEnglish', 0, 200) &&
+        isValidOptionalString(data, 'mosqueNameUrdu', 0, 200) &&
+        isValidOptionalString(data, 'location', 0, 300) &&
+        isValidOptionalString(data, 'timezone', 0, 50) &&
+        isValidOptionalString(data, 'primaryAdmin', 0, 100) &&
+        isValidOptionalString(data, 'lastSyncedAt', 0, 50) &&
+        (!('latitude' in data) || (data.latitude is number)) &&
+        (!('longitude' in data) || (data.longitude is number));
+    }
+
+    function isValidAnnouncement(data) {
+      return data.keys().hasOnly(['id', 'title', 'content', 'category', 'isPublic', 'date', 'postedBy']) &&
+        data.keys().hasAll(['id', 'title', 'content', 'category', 'isPublic', 'date', 'postedBy']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+        data.content is string && data.content.size() > 0 && data.content.size() <= 5000 &&
+        data.category is string && data.category.size() <= 50 &&
+        data.isPublic is bool &&
+        data.date is string && data.date.size() <= 50 &&
+        data.postedBy is string && data.postedBy.size() <= 100;
+    }
+
+    function isValidStudent(data) {
+      return data.keys().hasOnly(['id', 'fullName', 'arabicName', 'fatherName', 'guardianName', 'contactNumber', 'dateOfBirth', 'address', 'admissionDate', 'parentId', 'emergencyContact', 'photoUrl']) &&
+        data.keys().hasAll(['id', 'fullName', 'fatherName', 'guardianName', 'contactNumber', 'dateOfBirth', 'address', 'admissionDate', 'parentId', 'emergencyContact']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 100 &&
+        data.fatherName is string && data.fatherName.size() <= 100 &&
+        data.guardianName is string && data.guardianName.size() <= 100 &&
+        data.contactNumber is string && data.contactNumber.size() <= 30 &&
+        data.dateOfBirth is string && data.dateOfBirth.size() <= 30 &&
+        data.address is string && data.address.size() <= 255 &&
+        data.admissionDate is string && data.admissionDate.size() <= 30 &&
+        data.parentId is string && data.parentId.size() <= 128 &&
+        data.emergencyContact is string && data.emergencyContact.size() <= 30 &&
+        isValidOptionalString(data, 'arabicName', 0, 100) &&
+        isValidOptionalString(data, 'photoUrl', 0, 500);
+    }
+
+    function isValidAttendance(data) {
+      return data.keys().hasOnly(['id', 'studentId', 'date', 'status', 'markedBy', 'timestamp']) &&
+        data.keys().hasAll(['id', 'studentId', 'date', 'status', 'markedBy', 'timestamp']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.studentId is string && data.studentId.size() > 0 && data.studentId.size() <= 128 &&
+        data.date is string && data.date.size() <= 30 &&
+        data.status in ['PRESENT', 'ABSENT'] &&
+        data.markedBy is string && data.markedBy.size() <= 100 &&
+        data.timestamp is number;
+    }
+
+    function isValidMonthlyProgress(data) {
+      return data.keys().hasOnly(['id', 'studentId', 'month', 'quranReading', 'tajweedGrade', 'hifzProgress', 'islamicStudiesGrade', 'duasMemorized', 'attendancePercentage', 'teacherRemarks', 'evaluationDate']) &&
+        data.keys().hasAll(['id', 'studentId', 'month', 'quranReading', 'tajweedGrade', 'hifzProgress', 'islamicStudiesGrade', 'duasMemorized', 'attendancePercentage', 'teacherRemarks', 'evaluationDate']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.studentId is string && data.studentId.size() > 0 && data.studentId.size() <= 128 &&
+        data.month is string && data.month.size() <= 50 &&
+        data.quranReading is string && data.quranReading.size() <= 255 &&
+        data.tajweedGrade in ['A+', 'A', 'B', 'C'] &&
+        data.hifzProgress is string && data.hifzProgress.size() <= 255 &&
+        data.islamicStudiesGrade in ['A+', 'A', 'B', 'C'] &&
+        data.duasMemorized is string && data.duasMemorized.size() <= 255 &&
+        data.attendancePercentage is number && data.attendancePercentage >= 0 && data.attendancePercentage <= 100 &&
+        data.teacherRemarks is string && data.teacherRemarks.size() <= 1000 &&
+        data.evaluationDate is string && data.evaluationDate.size() <= 30;
+    }
+
+    function isValidOralExam(data) {
+      return data.keys().hasOnly(['id', 'studentId', 'examDate', 'subject', 'marksObtained', 'grade', 'teacherRemarks']) &&
+        data.keys().hasAll(['id', 'studentId', 'examDate', 'subject', 'marksObtained', 'grade', 'teacherRemarks']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.studentId is string && data.studentId.size() > 0 && data.studentId.size() <= 128 &&
+        data.examDate is string && data.examDate.size() <= 30 &&
+        data.subject is string && data.subject.size() <= 100 &&
+        data.marksObtained is number && data.marksObtained >= 0 && data.marksObtained <= 100 &&
+        data.grade is string && data.grade.size() <= 50 &&
+        data.teacherRemarks is string && data.teacherRemarks.size() <= 1000;
+    }
+
+    function isValidQuizQuestion(data) {
+      return data.keys().hasOnly(['id', 'question', 'category', 'options', 'correctAnswerIndex', 'explanation']) &&
+        data.keys().hasAll(['id', 'question', 'category', 'options', 'correctAnswerIndex', 'explanation']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.question is string && data.question.size() <= 500 &&
+        data.category is string && data.category.size() <= 100 &&
+        data.options is list && data.options.size() <= 10 &&
+        data.correctAnswerIndex is int && data.correctAnswerIndex >= 0 &&
+        data.explanation is string && data.explanation.size() <= 1000;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['timestamp', 'action', 'adminUid']) &&
+        data.action is string && data.action.size() <= 100 &&
+        data.adminUid is string && data.adminUid == request.auth.uid &&
+        data.timestamp is number;
+    }
+
+    // ===============================================================
+    // Root Default Deny
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: false;
+    }
+
+    // ===============================================================
+    // 1. User Profiles (/users/{userId})
+    // ===============================================================
+    match /users/{userId} {
+      // User can read their own profile; Admin can read all; Anonymous guest cannot read other profiles
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+
+      // Create:
+      // - Admin can create any profile
+      // - Non-anonymous user can create their own profile strictly with role: 'visitor'
+      // - Anonymous user can create their own profile strictly with role: 'guest' (NEVER 'admin' or 'visitor')
+      allow create: if isValidUser(request.resource.data) && (
+        isAdmin() ||
+        (
+          isNonAnonymous() &&
+          request.auth.uid == userId &&
+          request.resource.data.role == 'visitor'
+        ) ||
+        (
+          isAnonymous() &&
+          request.auth.uid == userId &&
+          request.resource.data.role == 'guest'
+        )
+      );
+
+      // Update:
+      // - Admin can update any profile
+      // - Non-anonymous user can update their own profile retaining role: 'visitor'
+      // - Anonymous user can update their own profile retaining role: 'guest'
+      // - UID is strictly immutable; privilege escalation is impossible
+      allow update: if isValidUser(request.resource.data) && (
+        isAdmin() ||
+        (
+          isNonAnonymous() &&
+          request.auth.uid == userId &&
+          request.resource.data.role == 'visitor' &&
+          (resource.data.role == 'visitor' || resource.data.role == 'guest') &&
+          request.resource.data.uid == resource.data.uid &&
+          areImmutableFieldsUnchanged(['uid'])
+        ) ||
+        (
+          isAnonymous() &&
+          request.auth.uid == userId &&
+          request.resource.data.role == 'guest' &&
+          resource.data.role == 'guest' &&
+          request.resource.data.uid == resource.data.uid &&
+          areImmutableFieldsUnchanged(['uid'])
+        )
+      );
+
+      // Delete: Admin only
+      allow delete: if isAdmin();
+    }
+
+    // ===============================================================
+    // 2. Mosque Settings & Configurations (Public read, Admin write)
+    // ===============================================================
     match /masjid_settings/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && isValidMasjidSettings(request.resource.data);
+      allow delete: if isAdmin();
     }
 
-    // 2. Official Daily Prayer Schedules (Public read, Admin write)
+    // ===============================================================
+    // 3. Official Daily Prayer Schedules (Public read, Admin write)
+    // ===============================================================
     match /prayer_schedules/{dateKey} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // 3. Announcements (Public can read public announcements; Admins can write)
+    // ===============================================================
+    // 4. Announcements (Public notices vs Admin access)
+    // ===============================================================
     match /announcements/{announcementId} {
-      allow read: if resource.data.isPublic == true || (isAuthenticated() && !isParent());
-      allow write: if isAdmin();
+      // Anyone (including guests and unauthenticated) can read public announcements; Admins can read all
+      allow read: if (resource != null && resource.data.isPublic == true) || isAdmin();
+      allow create, update: if isAdmin() && isValidAnnouncement(request.resource.data);
+      allow delete: if isAdmin();
     }
 
-    // 4. Students Profiles (Teachers & Admins can read/write; Parents can only read their child)
+    // ===============================================================
+    // 5. Sensitive Maktab Data (STRICTLY Admin Only - Forbidden to Guests)
+    // ===============================================================
     match /students/{studentId} {
-      allow read: if isTeacher() || isParentOf(studentId);
-      allow create, update: if isAdmin();
-      allow delete: if isPrimaryAdmin();
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidStudent(request.resource.data);
+      allow delete: if isAdmin();
     }
 
-    // 5. Daily Attendance (Teachers can create/update; Parents can read only their child; Admins can delete/manage)
     match /attendance/{attendanceId} {
-      allow read: if isTeacher() || isParentOf(resource.data.studentId);
-      allow create, update: if isTeacher();
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidAttendance(request.resource.data);
       allow delete: if isAdmin();
     }
 
-    // 6. Monthly Progress Reports (Teachers can create/update; Parents can read their child)
     match /monthly_progress/{reportId} {
-      allow read: if isTeacher() || isParentOf(resource.data.studentId);
-      allow create, update: if isTeacher();
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidMonthlyProgress(request.resource.data);
       allow delete: if isAdmin();
     }
 
-    // 7. Oral Examinations (Teachers can create/update; Parents can read their child)
     match /oral_examinations/{examId} {
-      allow read: if isTeacher() || isParentOf(resource.data.studentId);
-      allow create, update: if isTeacher();
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidOralExam(request.resource.data);
       allow delete: if isAdmin();
     }
 
-    // 8. Islamic Content (Calendar, Ramadan schedules, Duas, Quizzes - Public read, Admin write)
+    // ===============================================================
+    // 6. Islamic Content & Quizzes (Public read, Admin write)
+    // ===============================================================
     match /islamic_calendar/{docId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -97,14 +367,17 @@ service cloud.firestore {
 
     match /quiz_questions/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && isValidQuizQuestion(request.resource.data);
+      allow delete: if isAdmin();
     }
 
-    // 9. Audit Logs (Admin only)
+    // ===============================================================
+    // 7. Audit Logs (Admin only, Append-Only)
+    // ===============================================================
     match /audit_logs/{logId} {
-      allow read: if isPrimaryAdmin();
-      allow create: if isAuthenticated();
-      allow update, delete: if false; // Immutable audit log
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isValidAuditLog(request.resource.data);
+      allow update, delete: if false; // Append-only audit integrity
     }
   }
 }

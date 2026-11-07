@@ -1,11 +1,13 @@
-export type UserRole = 'PUBLIC' | 'PRIMARY_ADMIN' | 'SECONDARY_ADMIN' | 'TEACHER' | 'PARENT';
+export type UserRole = 'admin' | 'visitor' | 'guest';
 
 export interface AuthUser {
   uid: string;
   email: string;
   displayName: string;
+  photoURL?: string;
   role: UserRole;
-  linkedStudentIds: string[]; // Strictly enforced for Parents
+  isAnonymous?: boolean;
+  linkedStudentIds?: string[];
 }
 
 export interface PrayerTimeItem {

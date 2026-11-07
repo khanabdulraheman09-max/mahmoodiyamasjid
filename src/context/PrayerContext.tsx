@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { DailyPrayerSchedule, PrayerTimeItem } from '../types';
 import { SolarPrayerCalculator } from '../services/solarCalculator';
 import { WebAudioService } from '../services/audioService';
+import { SettingsRepository, PrayerOverrideRepository } from '../services/repositories';
 
 interface PrayerContextType {
   currentSchedule: DailyPrayerSchedule;
@@ -53,6 +54,34 @@ export const PrayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     localStorage.setItem('masjid_alarm_toggles', JSON.stringify(alarmToggles));
   }, [alarmToggles]);
+
+  // Load from SQLite repositories on mount
+  useEffect(() => {
+    let mounted = true;
+    async function loadSqliteData() {
+      try {
+        const coords = await SettingsRepository.getCoordinates();
+        if (coords && mounted) {
+          setLatitude(coords.latitude);
+          setLongitude(coords.longitude);
+        }
+        const overrides = await PrayerOverrideRepository.getAll();
+        if (overrides && Object.keys(overrides).length > 0 && mounted) {
+          const todayKey = new Date().toISOString().split('T')[0];
+          setManualOverrides((prev) => ({
+            ...prev,
+            [todayKey]: { ...(prev[todayKey] || {}), ...overrides },
+          }));
+        }
+      } catch (e) {
+        console.warn('Using baseline solar coordinates:', e);
+      }
+    }
+    loadSqliteData();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const generateScheduleForDate = (date: Date): DailyPrayerSchedule => {
     const dateKey = date.toISOString().split('T')[0];
@@ -191,6 +220,9 @@ export const PrayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         [prayerName]: { adhan: newAdhan, jamaat: newJamaat },
       },
     }));
+    PrayerOverrideRepository.save(prayerName, newAdhan, newJamaat).catch((e) =>
+      console.warn('Queued prayer override locally:', e)
+    );
   };
 
   const toggleAlarm = (prayerName: string) => {
@@ -203,6 +235,9 @@ export const PrayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const updateCoordinates = (lat: number, lng: number) => {
     setLatitude(lat);
     setLongitude(lng);
+    SettingsRepository.saveCoordinates(lat, lng).catch((e) =>
+      console.warn('Queued coordinate update locally:', e)
+    );
   };
 
   const getWeeklySchedules = (): DailyPrayerSchedule[] => {

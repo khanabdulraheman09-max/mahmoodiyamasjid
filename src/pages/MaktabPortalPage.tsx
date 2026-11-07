@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import {
+  StudentRepository,
+  AttendanceRepository,
+  ProgressRepository,
+  ExamRepository,
+} from '../services/repositories';
 import {
   GraduationCap,
   Users,
@@ -23,10 +29,13 @@ import {
 } from '../data/mockData';
 import { Student, AttendanceRecord, MonthlyProgress, OralExamination } from '../types';
 import { PdfReportService } from '../services/pdfService';
+import { useNavigation } from '../context/NavigationContext';
+import { NativeService } from '../services/nativeService';
 
 export const MaktabPortalPage: React.FC = () => {
-  const { isTeacher, isAdmin, isParent, currentUser, canAccessStudent } = useAuth();
-  const canEdit = isTeacher || isAdmin;
+  const { isAdmin, currentUser } = useAuth();
+  const { registerBackHandler } = useNavigation();
+  const canEdit = isAdmin;
 
   const [activeTab, setActiveTab] = useState<'students' | 'attendance' | 'evaluations' | 'exams'>('students');
   const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
@@ -40,6 +49,43 @@ export const MaktabPortalPage: React.FC = () => {
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [showExamModal, setShowExamModal] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Close modals on Android Back button
+  useEffect(() => {
+    if (!showAddStudentModal) return;
+    return registerBackHandler(
+      'maktab_add_student_modal',
+      () => {
+        setShowAddStudentModal(false);
+        return true;
+      },
+      90
+    );
+  }, [showAddStudentModal, registerBackHandler]);
+
+  useEffect(() => {
+    if (!showProgressModal) return;
+    return registerBackHandler(
+      'maktab_progress_modal',
+      () => {
+        setShowProgressModal(false);
+        return true;
+      },
+      90
+    );
+  }, [showProgressModal, registerBackHandler]);
+
+  useEffect(() => {
+    if (!showExamModal) return;
+    return registerBackHandler(
+      'maktab_exam_modal',
+      () => {
+        setShowExamModal(false);
+        return true;
+      },
+      90
+    );
+  }, [showExamModal, registerBackHandler]);
 
   // Registration form states
   const [newStudentName, setNewStudentName] = useState('');
@@ -63,38 +109,71 @@ export const MaktabPortalPage: React.FC = () => {
   const [examGrade, setExamGrade] = useState<'Excellent' | 'Good' | 'Needs Improvement'>('Excellent');
   const [examRemarks, setExamRemarks] = useState('Clear pronunciation of throat letters and fluent recitation.');
 
-  // Filter students based on role and search query
+  // Load from SQLite Repositories on initial mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadFromRepositories() {
+      try {
+        const [loadedStudents, loadedAttendance, loadedProgress, loadedExams] = await Promise.all([
+          StudentRepository.getAll(),
+          AttendanceRepository.getAll(),
+          ProgressRepository.getAll(),
+          ExamRepository.getAll(),
+        ]);
+
+        if (isMounted) {
+          if (loadedStudents && loadedStudents.length > 0) setStudents(loadedStudents);
+          if (loadedAttendance && loadedAttendance.length > 0) setAttendance(loadedAttendance);
+          if (loadedProgress && loadedProgress.length > 0) setProgressList(loadedProgress);
+          if (loadedExams && loadedExams.length > 0) setExamList(loadedExams);
+        }
+      } catch (err) {
+        console.warn('Loaded fallback data while database initialized:', err);
+      }
+    }
+    loadFromRepositories();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Filter students based on search query
   const visibleStudents = students.filter((s) => {
-    if (isParent && !canAccessStudent(s.id)) return false;
     return s.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
            s.fatherName.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  const handleToggleAttendance = (studentId: string) => {
+  const handleToggleAttendance = async (studentId: string) => {
     if (!canEdit) return;
     const today = new Date().toISOString().split('T')[0];
+    const existing = attendance.find((a) => a.studentId === studentId && a.date === today);
+
+    const recordToSave: AttendanceRecord = existing
+      ? { ...existing, status: existing.status === 'PRESENT' ? 'ABSENT' : 'PRESENT' }
+      : {
+          id: `att_${studentId}_${Date.now()}`,
+          studentId,
+          date: today,
+          status: 'PRESENT',
+          markedBy: currentUser?.displayName || 'Admin',
+          timestamp: Date.now(),
+        };
+
     setAttendance((prev) => {
-      const existing = prev.find((a) => a.studentId === studentId && a.date === today);
-      if (existing) {
-        return prev.map((a) =>
-          a.id === existing.id
-            ? { ...a, status: a.status === 'PRESENT' ? 'ABSENT' : 'PRESENT' }
-            : a
-        );
-      } else {
-        return [
-          ...prev,
-          {
-            id: `att_${studentId}_${Date.now()}`,
-            studentId,
-            date: today,
-            status: 'PRESENT',
-            markedBy: currentUser.displayName,
-            timestamp: Date.now(),
-          },
-        ];
+      const idx = prev.findIndex((a) => a.id === recordToSave.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = recordToSave;
+        return updated;
       }
+      return [...prev, recordToSave];
     });
+
+    try {
+      await AttendanceRepository.save(recordToSave);
+    } catch (e) {
+      console.warn('Offline attendance save queued:', e);
+    }
   };
 
   const handleDownloadPdf = (student: Student) => {
@@ -116,7 +195,7 @@ export const MaktabPortalPage: React.FC = () => {
     PdfReportService.generateStudentReport(student, prog, studentExams);
   };
 
-  const handleAddStudent = (e: React.FormEvent) => {
+  const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStudentName || !newFatherName) return;
 
@@ -138,11 +217,17 @@ export const MaktabPortalPage: React.FC = () => {
     setNewStudentName('');
     setNewFatherName('');
     setNewContact('');
-    setSuccessToast(`Student ${newStudentName} successfully registered in Maktab!`);
+    setSuccessToast(`Student ${newStudentName} registered locally (queued for sync)!`);
     setTimeout(() => setSuccessToast(null), 4000);
+
+    try {
+      await StudentRepository.insert(newStudent);
+    } catch (err) {
+      console.warn('Offline student save queued:', err);
+    }
   };
 
-  const handleSaveEvaluation = (e: React.FormEvent) => {
+  const handleSaveEvaluation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudent) return;
 
@@ -162,11 +247,17 @@ export const MaktabPortalPage: React.FC = () => {
 
     setProgressList([newProgress, ...progressList.filter((p) => p.studentId !== selectedStudent.id)]);
     setShowProgressModal(false);
-    setSuccessToast(`Monthly progress recorded for ${selectedStudent.fullName}! (ماہانہ رپورٹ محفوظ ہو گئی)`);
+    setSuccessToast(`Monthly progress recorded for ${selectedStudent.fullName}!`);
     setTimeout(() => setSuccessToast(null), 4000);
+
+    try {
+      await ProgressRepository.save(newProgress);
+    } catch (err) {
+      console.warn('Offline evaluation save queued:', err);
+    }
   };
 
-  const handleSaveExam = (e: React.FormEvent) => {
+  const handleSaveExam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudent) return;
 
@@ -182,8 +273,14 @@ export const MaktabPortalPage: React.FC = () => {
 
     setExamList([newExam, ...examList]);
     setShowExamModal(false);
-    setSuccessToast(`Oral exam recorded for ${selectedStudent.fullName}: ${examMarks}/100! (امتحان محفوظ ہو گیا)`);
+    setSuccessToast(`Oral exam recorded for ${selectedStudent.fullName}: ${examMarks}/100!`);
     setTimeout(() => setSuccessToast(null), 4000);
+
+    try {
+      await ExamRepository.save(newExam);
+    } catch (err) {
+      console.warn('Offline exam save queued:', err);
+    }
   };
 
   return (
@@ -220,7 +317,7 @@ export const MaktabPortalPage: React.FC = () => {
             <span>Students ({visibleStudents.length})</span>
           </button>
 
-          {!isParent && (
+          {isAdmin && (
             <button
               onClick={() => setActiveTab('attendance')}
               className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
@@ -254,7 +351,22 @@ export const MaktabPortalPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ADMIN & TEACHER ACTION BAR (ALWAYS VISIBLE FOR QUICK ENTRY) */}
+      {/* VISITOR TRANSPARENCY NOTICE */}
+      {!isAdmin && (
+        <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-start space-x-3 text-xs text-emerald-900 shadow-sm">
+          <div className="p-2 rounded-xl bg-[#075B3A] text-[#D4AF37] flex-shrink-0 mt-0.5">
+            <Users className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-bold text-sm text-[#075B3A]">Public Viewer Mode (ناظر موڈ)</div>
+            <p className="text-emerald-800 text-xs mt-0.5 leading-relaxed">
+              You are viewing the Maktab directory in Visitor mode. Syllabus progress, Quran recitation, and academic evaluations are shown. To protect student privacy, parent contact numbers, residential addresses, and attendance registers are restricted to Mosque Administration.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN ACTION BAR (VISIBLE ONLY TO ADMIN) */}
       {canEdit && (
         <div className="bg-gradient-to-r from-[#FFF9E6] via-white to-[#E4F3EC] p-4 rounded-2xl border-2 border-[#D4AF37]/50 shadow-sm flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
@@ -262,9 +374,9 @@ export const MaktabPortalPage: React.FC = () => {
               <Edit className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-[#075B3A]">Admin & Teacher Quick Entry (کارکردگی درج کرنے کا پینل)</h4>
+              <h4 className="text-sm font-bold text-[#075B3A]">Admin Management Panel (انتظامی پینل)</h4>
               <p className="text-xs text-gray-600">
-                Logged in as: <strong className="text-gray-900">{currentUser.displayName}</strong>. Click below to add progress or marks.
+                Logged in as Admin: <strong className="text-gray-900">{currentUser?.displayName || 'Admin'}</strong>. You have full editing privileges.
               </p>
             </div>
           </div>
@@ -342,7 +454,18 @@ export const MaktabPortalPage: React.FC = () => {
 
                     <h3 className="text-base font-bold text-gray-900 mb-1">{student.fullName}</h3>
                     <p className="text-xs text-gray-500">Father: <strong className="text-gray-800">{student.fatherName}</strong></p>
-                    <p className="text-xs text-gray-500">Contact: {student.contactNumber}</p>
+                    {isAdmin ? (
+                      <>
+                        <p className="text-xs text-gray-500">Contact: <strong className="text-gray-700">{student.contactNumber}</strong></p>
+                        <p className="text-xs text-gray-500 truncate" title={student.address}>Address: {student.address}</p>
+                      </>
+                    ) : (
+                      <p className="text-[11px] text-gray-500 py-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 font-medium text-[10px]">
+                          🔒 Contact & address shielded for privacy
+                        </span>
+                      </p>
+                    )}
                     <p className="text-xs text-gray-500">Admitted: {student.admissionDate}</p>
 
                     {/* Quick Stats */}
@@ -475,7 +598,6 @@ export const MaktabPortalPage: React.FC = () => {
             {progressList.map((prog) => {
               const student = students.find((s) => s.id === prog.studentId);
               if (!student) return null;
-              if (isParent && !canAccessStudent(student.id)) return null;
 
               return (
                 <div key={prog.id} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-3">
@@ -594,7 +716,6 @@ export const MaktabPortalPage: React.FC = () => {
                 {examList.map((exam) => {
                   const student = students.find((s) => s.id === exam.studentId);
                   if (!student) return null;
-                  if (isParent && !canAccessStudent(student.id)) return null;
 
                   return (
                     <tr key={exam.id} className="hover:bg-gray-50">

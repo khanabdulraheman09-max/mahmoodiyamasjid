@@ -1,14 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Bell, Plus, ShieldCheck, Tag, Calendar, User, X } from 'lucide-react';
+import { useNavigation } from '../context/NavigationContext';
+import { NativeService } from '../services/nativeService';
+import { AnnouncementRepository } from '../services/repositories';
+import { Bell, Plus, ShieldCheck, Tag, Calendar, User, X, Share2 } from 'lucide-react';
 import { ANNOUNCEMENTS } from '../data/mockData';
 import { Announcement } from '../types';
 
 export const AnnouncementsPage: React.FC = () => {
   const { isAdmin, currentUser } = useAuth();
+  const { registerBackHandler } = useNavigation();
   const [announcements, setAnnouncements] = useState<Announcement[]>(ANNOUNCEMENTS);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Close create announcement modal on Android Back button
+  useEffect(() => {
+    if (!showCreateModal) return;
+    return registerBackHandler(
+      'announcements_create_modal',
+      () => {
+        setShowCreateModal(false);
+        return true;
+      },
+      90
+    );
+  }, [showCreateModal, registerBackHandler]);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -18,14 +35,33 @@ export const AnnouncementsPage: React.FC = () => {
 
   const categories = ['All', 'General', 'Prayer Times', 'Jumuah', 'Maktab', 'Ramadan', 'Emergency'];
 
+  // Load announcements from SQLite on mount
+  useEffect(() => {
+    let mounted = true;
+    async function loadAnnouncements() {
+      try {
+        const loaded = await AnnouncementRepository.getAll();
+        if (loaded && loaded.length > 0 && mounted) {
+          setAnnouncements(loaded);
+        }
+      } catch (e) {
+        console.warn('Using baseline announcements:', e);
+      }
+    }
+    loadAnnouncements();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const filtered = announcements.filter((a) => {
-    // Hide private Maktab announcements from public guests
-    if (!a.isPublic && currentUser.role === 'PUBLIC') return false;
+    // Hide private announcements from visitors
+    if (!a.isPublic && !isAdmin) return false;
     if (selectedCategory === 'All') return true;
     return a.category === selectedCategory;
   });
 
-  const handleCreateAnnouncement = (e: React.FormEvent) => {
+  const handleCreateAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !content) return;
 
@@ -36,13 +72,19 @@ export const AnnouncementsPage: React.FC = () => {
       content,
       isPublic,
       date: new Date().toISOString().split('T')[0],
-      postedBy: currentUser.displayName,
+      postedBy: currentUser?.displayName || 'Mosque Admin',
     };
 
     setAnnouncements([newAnn, ...announcements]);
     setShowCreateModal(false);
     setTitle('');
     setContent('');
+
+    try {
+      await AnnouncementRepository.save(newAnn);
+    } catch (err) {
+      console.warn('Offline announcement save queued:', err);
+    }
   };
 
   return (
@@ -119,7 +161,7 @@ export const AnnouncementsPage: React.FC = () => {
                 )}
               </div>
 
-              <div className="flex items-center space-x-4 text-xs text-gray-400 font-medium">
+              <div className="flex items-center space-x-3 text-xs text-gray-400 font-medium">
                 <span className="flex items-center space-x-1">
                   <Calendar className="w-3.5 h-3.5" />
                   <span>{item.date}</span>
@@ -128,6 +170,21 @@ export const AnnouncementsPage: React.FC = () => {
                   <User className="w-3.5 h-3.5" />
                   <span>{item.postedBy}</span>
                 </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    NativeService.share({
+                      title: item.title,
+                      text: `${item.title}\n\n${item.content}\n\n— Masjid Mehmoodiya, Sawangi`,
+                      dialogTitle: 'Share Announcement',
+                    });
+                  }}
+                  className="flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 hover:bg-emerald-100 active:scale-95 transition-all"
+                  title="Share announcement via WhatsApp / Android"
+                >
+                  <Share2 className="w-3 h-3 text-emerald-600" />
+                  <span className="text-[11px] font-semibold">Share</span>
+                </button>
               </div>
             </div>
 
