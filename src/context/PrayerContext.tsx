@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { DailyPrayerSchedule, PrayerTimeItem } from '../types';
 import { SolarPrayerCalculator } from '../services/solarCalculator';
-import { WebAudioService } from '../services/audioService';
 import { SettingsRepository, PrayerOverrideRepository } from '../services/repositories';
+import { FirestoreService } from '../services/firestoreService';
+import { NotificationService } from '../services/notificationService';
 
 interface PrayerContextType {
   currentSchedule: DailyPrayerSchedule;
@@ -16,6 +17,7 @@ interface PrayerContextType {
   updateCoordinates: (lat: number, lng: number) => void;
   saveManualOverride: (prayerName: string, newAdhan: string, newJamaat: string) => void;
   toggleAlarm: (prayerName: string) => void;
+  alarmToggles: Record<string, boolean>;
   jamaatLeadMinutes: number;
   setJamaatLeadMinutes: (mins: number) => void;
   getWeeklySchedules: () => DailyPrayerSchedule[];
@@ -83,6 +85,34 @@ export const PrayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, []);
 
+  // Listen to live background sync events from Firestore/SyncEngine
+  useEffect(() => {
+    const handlePrayerUpdates = (event: any) => {
+      const overrides = event.detail;
+      if (overrides && typeof overrides === 'object') {
+        const todayKey = new Date().toISOString().split('T')[0];
+        setManualOverrides((prev) => ({
+          ...prev,
+          [todayKey]: { ...(prev[todayKey] || {}), ...overrides },
+        }));
+      }
+    };
+
+    const handleCoordUpdates = (event: any) => {
+      if (event.detail?.latitude && event.detail?.longitude) {
+        setLatitude(event.detail.latitude);
+        setLongitude(event.detail.longitude);
+      }
+    };
+
+    window.addEventListener('masjid:prayer-overrides-updated', handlePrayerUpdates);
+    window.addEventListener('masjid:coordinates-updated', handleCoordUpdates);
+    return () => {
+      window.removeEventListener('masjid:prayer-overrides-updated', handlePrayerUpdates);
+      window.removeEventListener('masjid:coordinates-updated', handleCoordUpdates);
+    };
+  }, []);
+
   const generateScheduleForDate = (date: Date): DailyPrayerSchedule => {
     const dateKey = date.toISOString().split('T')[0];
     const calculated = SolarPrayerCalculator.calculate(date, latitude, longitude, 5.5, 2.0);
@@ -137,19 +167,18 @@ export const PrayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       hijriDate: SolarPrayerCalculator.getHijriDate(date),
       prayers,
       sunriseTime: calculated.sunrise,
-      jumuahBayanTime: '01:00 PM',
-      jumuahKhutbahTime: '01:30 PM',
-      jumuahJamaatTime: '01:45 PM',
       isOverridden: Object.keys(dayOverrides).length > 0,
     };
   };
 
   const [currentSchedule, setCurrentSchedule] = useState<DailyPrayerSchedule>(() => generateScheduleForDate(new Date()));
 
-  // Live clock ticker
+  // Live clock ticker & automated Adhan audio + notification triggers
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
+      const dateKey = now.toISOString().split('T')[0];
+
       // Format time in 12h
       let h = now.getHours();
       const m = now.getMinutes();
@@ -157,7 +186,9 @@ export const PrayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const period = h >= 12 ? 'PM' : 'AM';
       h = h % 12 || 12;
       const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-      setCurrentTimeStr(`${pad(h)}:${pad(m)}:${pad(s)} ${period}`);
+      const formattedTimeStr = `${pad(h)}:${pad(m)}:${pad(s)} ${period}`;
+      const currentHm = `${pad(h)}:${pad(m)} ${period}`;
+      setCurrentTimeStr(formattedTimeStr);
 
       // Format date in English
       const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -167,6 +198,27 @@ export const PrayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Re-evaluate schedule
       const sched = generateScheduleForDate(now);
       setCurrentSchedule(sched);
+
+      // Automated Adhan and Jamaat triggers:
+      for (const p of sched.prayers) {
+        // 1. Check Adhan Time Match
+        if (p.officialAdhanTime === currentHm) {
+          const adhanKey = `${dateKey}_${p.name}_adhan_${currentHm}`;
+          if (!NotificationService.hasTriggered(adhanKey) && alarmToggles[p.name] !== false) {
+            NotificationService.markTriggered(adhanKey);
+            NotificationService.triggerAdhan(p.name, p.officialAdhanTime);
+          }
+        }
+
+        // 2. Check Jamaat Time Match
+        if (p.jamaatTime === currentHm) {
+          const jamaatKey = `${dateKey}_${p.name}_jamaat_${currentHm}`;
+          if (!NotificationService.hasTriggered(jamaatKey) && alarmToggles[p.name] !== false) {
+            NotificationService.markTriggered(jamaatKey);
+            NotificationService.triggerJamaat(p.name, p.jamaatTime);
+          }
+        }
+      }
 
       // Determine next prayer and countdown
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -220,8 +272,15 @@ export const PrayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         [prayerName]: { adhan: newAdhan, jamaat: newJamaat },
       },
     }));
+
+    // Save locally to SQLite and sync queue
     PrayerOverrideRepository.save(prayerName, newAdhan, newJamaat).catch((e) =>
       console.warn('Queued prayer override locally:', e)
+    );
+
+    // Save directly to Firebase Firestore if online
+    FirestoreService.savePrayerOverride(prayerName, newAdhan, newJamaat).catch((e) =>
+      console.warn('Queued prayer override for Firestore background push:', e)
     );
   };
 
@@ -270,6 +329,7 @@ export const PrayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updateCoordinates,
         saveManualOverride,
         toggleAlarm,
+        alarmToggles,
         jamaatLeadMinutes,
         setJamaatLeadMinutes,
         getWeeklySchedules,

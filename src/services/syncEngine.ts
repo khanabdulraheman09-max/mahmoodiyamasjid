@@ -1,6 +1,6 @@
 import { Network } from '@capacitor/network';
 import { App } from '@capacitor/app';
-import { doc, setDoc, getDocs, collection } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocs, collection, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import {
   SyncQueueRepository,
@@ -36,6 +36,7 @@ class SyncEngine {
   private syncError: string | null = null;
   private listeners: Set<SyncListener> = new Set();
   private periodicTimer: any = null;
+  private snapshotUnsubscribes: Unsubscribe[] = [];
 
   constructor() {
     const savedLastSync = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function')
@@ -69,6 +70,7 @@ class SyncEngine {
         if (wasOffline && this.isOnline) {
           console.log('[SyncEngine] Network reconnected. Triggering sync...');
           this.triggerSync('network_reconnected');
+          this.setupRealtimeListeners();
         }
       });
     } catch (e) {
@@ -78,6 +80,7 @@ class SyncEngine {
           this.isOnline = true;
           this.notify();
           this.triggerSync('network_reconnected');
+          this.setupRealtimeListeners();
         });
         window.addEventListener('offline', () => {
           this.isOnline = false;
@@ -104,20 +107,90 @@ class SyncEngine {
       }
     }
 
-    // 3. Periodic Background Sync (every 5 minutes if online)
+    // 3. Periodic Background Sync: Auto-trigger every 1 minute if online
     if (this.periodicTimer) clearInterval(this.periodicTimer);
     this.periodicTimer = setInterval(() => {
       if (this.isOnline && !this.isSyncing) {
-        this.triggerSync('periodic_interval');
+        this.triggerSync('periodic_1min');
       }
-    }, 5 * 60 * 1000);
+    }, 60 * 1000); // 1 minute automatic background interval
+
+    // 4. Set up real-time Firestore listeners for immediate background updates
+    this.setupRealtimeListeners();
 
     // Initial check
     await this.notify();
 
-    // Trigger initial sync if online
+    // Trigger initial sync on startup / refresh
     if (this.isOnline) {
       this.triggerSync('initial_launch');
+    }
+  }
+
+  /**
+   * Real-time listeners via Firestore onSnapshot:
+   * Provides immediate (sub-second) updates to every client when admin edits prayer times or settings in Firestore.
+   */
+  private setupRealtimeListeners(): void {
+    if (!isFirebaseConfigured() || !db) return;
+
+    // Clean up previous listeners
+    this.snapshotUnsubscribes.forEach((unsub) => {
+      try {
+        unsub();
+      } catch (_) {}
+    });
+    this.snapshotUnsubscribes = [];
+
+    try {
+      // A. Real-time Prayer Overrides listener
+      const prayerDocRef = doc(db, 'prayer_schedules', 'latest_overrides');
+      const unsubPrayer = onSnapshot(prayerDocRef, async (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          const overrides: Record<string, { adhan: string; jamaat: string }> = {};
+
+          ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].forEach((p) => {
+            if (data[p] && typeof data[p] === 'object') {
+              overrides[p] = {
+                adhan: data[p].adhan || '',
+                jamaat: data[p].jamaat || '',
+              };
+              // Persist locally in SQLite
+              PrayerOverrideRepository.save(p, overrides[p].adhan, overrides[p].jamaat, true).catch(() => {});
+            }
+          });
+
+          // Dispatch event for UI reactivity across all tabs and contexts
+          if (typeof window !== 'undefined' && Object.keys(overrides).length > 0) {
+            window.dispatchEvent(new CustomEvent('masjid:prayer-overrides-updated', { detail: overrides }));
+          }
+        }
+      }, (err) => {
+        console.warn('[SyncEngine] Real-time prayer listener warning:', err);
+      });
+      this.snapshotUnsubscribes.push(unsubPrayer);
+
+      // B. Real-time Masjid Settings listener
+      const settingsDocRef = doc(db, 'masjid_settings', 'general_config');
+      const unsubSettings = onSnapshot(settingsDocRef, async (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+            await SettingsRepository.saveCoordinates(data.latitude, data.longitude, true).catch(() => {});
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('masjid:coordinates-updated', {
+                detail: { latitude: data.latitude, longitude: data.longitude }
+              }));
+            }
+          }
+        }
+      }, (err) => {
+        console.warn('[SyncEngine] Real-time settings listener warning:', err);
+      });
+      this.snapshotUnsubscribes.push(unsubSettings);
+    } catch (err) {
+      console.warn('[SyncEngine] Failed to setup real-time listeners:', err);
     }
   }
 
@@ -131,7 +204,7 @@ class SyncEngine {
     return {
       isOnline: this.isOnline,
       isSyncing: this.isSyncing,
-      pendingCount: 0, // will be dynamically refreshed
+      pendingCount: 0,
       lastSyncTime: this.lastSyncTime,
       lastSyncMessage: this.lastSyncMessage,
       error: this.syncError,
@@ -154,7 +227,7 @@ class SyncEngine {
   /**
    * Main sync routine:
    * 1. Uploads pending local changes (Flush queue)
-   * 2. Pulls updated data from server
+   * 2. Pulls updated data from server (Prayer times, Settings, Maktab, Announcements)
    * 3. Updates local database & last sync time
    */
   async triggerSync(triggerReason: string = 'manual'): Promise<boolean> {
@@ -175,13 +248,13 @@ class SyncEngine {
     try {
       // Step A: Check if Firebase is configured
       if (!isFirebaseConfigured() || !db) {
-        // In local mode / pending .env, simulate successful local drain for testing
+        // In local mode / pending .env, simulate successful local drain
         const pendingItems = await SyncQueueRepository.getPending();
         for (const item of pendingItems) {
           await SyncQueueRepository.markCompleted(item.id);
         }
         this.lastSyncTime = Date.now();
-        this.lastSyncMessage = `Synchronized locally (${triggerReason}). Live sync active once .env has Firebase keys.`;
+        this.lastSyncMessage = `Synchronized locally (${triggerReason}). Live cloud sync active once .env has Firebase keys.`;
         if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
           localStorage.setItem('masjid_last_sync_timestamp', String(this.lastSyncTime));
         }
@@ -204,7 +277,7 @@ class SyncEngine {
       await this.pullServerChanges();
 
       this.lastSyncTime = Date.now();
-      this.lastSyncMessage = 'All records successfully synchronized with Firebase.';
+      this.lastSyncMessage = `All records synchronized with Firebase (${triggerReason}).`;
       if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
         localStorage.setItem('masjid_last_sync_timestamp', String(this.lastSyncTime));
       }
@@ -239,11 +312,16 @@ class SyncEngine {
         await setDoc(doc(db, 'announcements', item.entityId), item.payload, { merge: true });
         break;
       case 'prayer_override':
-        await setDoc(
-          doc(db, 'prayer_schedules', 'latest_overrides'),
-          { [item.entityId]: item.payload },
-          { merge: true }
-        );
+        const todayKey = new Date().toISOString().split('T')[0];
+        const payload = {
+          [item.entityId]: item.payload,
+          updatedAt: new Date().toISOString(),
+          updatedBy: 'Admin',
+        };
+        await Promise.all([
+          setDoc(doc(db, 'prayer_schedules', 'latest_overrides'), payload, { merge: true }),
+          setDoc(doc(db, 'prayer_schedules', todayKey), payload, { merge: true }),
+        ]);
         break;
       case 'settings':
         await setDoc(doc(db, 'masjid_settings', 'general_config'), item.payload, { merge: true });
@@ -255,7 +333,44 @@ class SyncEngine {
     if (!db) return;
 
     try {
-      // Pull announcements
+      // 1. Pull Latest Prayer Times & Overrides
+      const prayerDocRef = doc(db, 'prayer_schedules', 'latest_overrides');
+      const prayerSnap = await getDoc(prayerDocRef);
+      if (prayerSnap.exists()) {
+        const data = prayerSnap.data();
+        const overrides: Record<string, { adhan: string; jamaat: string }> = {};
+
+        ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].forEach((p) => {
+          if (data[p] && typeof data[p] === 'object') {
+            overrides[p] = {
+              adhan: data[p].adhan || '',
+              jamaat: data[p].jamaat || '',
+            };
+            PrayerOverrideRepository.save(p, overrides[p].adhan, overrides[p].jamaat, true).catch(() => {});
+          }
+        });
+
+        if (typeof window !== 'undefined' && Object.keys(overrides).length > 0) {
+          window.dispatchEvent(new CustomEvent('masjid:prayer-overrides-updated', { detail: overrides }));
+        }
+      }
+
+      // 2. Pull Mosque Settings
+      const settingsDocRef = doc(db, 'masjid_settings', 'general_config');
+      const settingsSnap = await getDoc(settingsDocRef);
+      if (settingsSnap.exists()) {
+        const data = settingsSnap.data();
+        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+          await SettingsRepository.saveCoordinates(data.latitude, data.longitude, true).catch(() => {});
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('masjid:coordinates-updated', {
+              detail: { latitude: data.latitude, longitude: data.longitude }
+            }));
+          }
+        }
+      }
+
+      // 3. Pull Announcements
       const annSnap = await getDocs(collection(db, 'announcements'));
       for (const d of annSnap.docs) {
         const data = d.data();
@@ -269,11 +384,11 @@ class SyncEngine {
             date: data.date || new Date().toISOString().split('T')[0],
             postedBy: data.postedBy || 'Admin',
           },
-          true // fromSync = true, prevents queue loop
+          true
         );
       }
 
-      // Pull students
+      // 4. Pull Students
       const studentSnap = await getDocs(collection(db, 'students'));
       for (const d of studentSnap.docs) {
         const data = d.data();
