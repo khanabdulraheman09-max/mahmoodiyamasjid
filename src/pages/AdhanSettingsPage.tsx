@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { usePrayer } from '../context/PrayerContext';
 import { WebAudioService } from '../services/audioService';
-import { Volume2, VolumeX, Play, Square, Bell, CheckCircle, Volume1 } from 'lucide-react';
+import { NotificationService, NotificationSettings } from '../services/notificationService';
+import { Volume2, VolumeX, Play, Square, Bell, CheckCircle, Volume1, Sparkles, Send } from 'lucide-react';
 
 export const AdhanSettingsPage: React.FC = () => {
   const { currentSchedule, toggleAlarm, jamaatLeadMinutes, setJamaatLeadMinutes } = usePrayer();
   const [isPlayingTest, setIsPlayingTest] = useState(false);
   const [volume, setVolume] = useState<number>(100);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
-    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+    NotificationService.getPermission()
   );
+  const [settings, setSettings] = useState<NotificationSettings>(NotificationService.getSettings());
+  const [testToast, setTestToast] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -43,22 +46,63 @@ export const AdhanSettingsPage: React.FC = () => {
   };
 
   const handleRequestNotifications = async () => {
-    if (typeof Notification !== 'undefined') {
-      const perm = await Notification.requestPermission();
+    const perm = await NotificationService.requestPermission();
+    setNotificationPermission(perm);
+  };
+
+  const updateSetting = (key: keyof NotificationSettings, val: any) => {
+    const updated = NotificationService.saveSettings({ [key]: val });
+    setSettings(updated);
+  };
+
+  const handleTestAdhanNotification = async () => {
+    if (notificationPermission !== 'granted') {
+      const perm = await NotificationService.requestPermission();
       setNotificationPermission(perm);
+      if (perm !== 'granted') {
+        setTestToast('Please allow notifications in your browser/app settings.');
+        setTimeout(() => setTestToast(null), 3000);
+        return;
+      }
     }
+    await NotificationService.triggerAdhan('Fajr', '05:25 AM');
+    setTestToast('Adhan notification & vocal audio triggered!');
+    setTimeout(() => setTestToast(null), 3500);
+  };
+
+  const handleTestJamaatNotification = async () => {
+    if (notificationPermission !== 'granted') {
+      const perm = await NotificationService.requestPermission();
+      setNotificationPermission(perm);
+      if (perm !== 'granted') {
+        setTestToast('Please allow notifications in your browser/app settings.');
+        setTimeout(() => setTestToast(null), 3000);
+        return;
+      }
+    }
+    await NotificationService.triggerJamaat('Fajr', '05:50 AM');
+    setTestToast('Namaz / Jamaat notification triggered!');
+    setTimeout(() => setTestToast(null), 3500);
   };
 
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      {/* Test feedback toast */}
+      {testToast && (
+        <div className="fixed top-20 right-4 z-50 bg-[#075B3A] text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center space-x-2 border-2 border-[#D4AF37] text-xs font-bold animate-fadeIn">
+          <Sparkles className="w-4 h-4 text-[#D4AF37]" />
+          <span>{testToast}</span>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h2 className="text-2xl sm:text-3xl font-extrabold text-[#075B3A] flex items-center space-x-2">
           <Volume2 className="w-7 h-7 text-[#D4AF37]" />
-          <span>Adhan Alarms & Audio Settings (اذان کے الارم)</span>
+          <span>Adhan Alarms & Notifications (اذان اور نماز کے الارم)</span>
         </h2>
         <p className="text-xs sm:text-sm text-gray-500 mt-1">
-          Configure authentic vocal Adhan audio (Allahu Akbar Allahu Akbar) and pre-Jamaat reminder notifications
+          Configure authentic vocal Adhan audio, mobile notifications on Adhan time, and Jamaat time alerts
         </p>
       </div>
 
@@ -131,33 +175,109 @@ export const AdhanSettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Notification Permissions Card */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-start space-x-3">
-          <div className="p-2.5 rounded-xl bg-[#E4F3EC] text-[#075B3A]">
-            <Bell className="w-5 h-5" />
+      {/* 2. Notification Permissions & Automated Triggers */}
+      <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+          <div className="flex items-start space-x-3">
+            <div className="p-2.5 rounded-xl bg-[#E4F3EC] text-[#075B3A]">
+              <Bell className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">Mobile & System Notifications (اطلاعات)</h4>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Current Status: <strong className="uppercase">{notificationPermission}</strong>
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-sm font-bold text-gray-900">Desktop & Mobile Notifications (اطلاعات)</h4>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Current Status: <strong className="uppercase">{notificationPermission}</strong>
-            </p>
+
+          {notificationPermission !== 'granted' ? (
+            <button
+              onClick={handleRequestNotifications}
+              className="px-4 py-2 bg-[#D4AF37] text-[#043A25] font-bold text-xs rounded-xl hover:bg-[#AA8A22] transition-colors"
+            >
+              Enable Notifications (اطلاعات آن کریں)
+            </button>
+          ) : (
+            <span className="flex items-center space-x-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+              <CheckCircle className="w-4 h-4" />
+              <span>Notifications Active</span>
+            </span>
+          )}
+        </div>
+
+        {/* Automated Trigger Options */}
+        <div className="space-y-3 pt-1">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">Automated Background Triggers</h4>
+
+          <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-xl border border-gray-200">
+            <div>
+              <span className="text-xs font-bold text-gray-900 block">Auto-Play Adhan Audio on Adhan Time</span>
+              <span className="text-[11px] text-gray-500">Automatically plays vocal Adhan recitation when prayer adhan time starts</span>
+            </div>
+            <button
+              onClick={() => updateSetting('autoPlayAdhanAudio', !settings.autoPlayAdhanAudio)}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                settings.autoPlayAdhanAudio
+                  ? 'bg-[#075B3A] text-white shadow-sm'
+                  : 'bg-gray-200 text-gray-600'
+              }`}
+            >
+              {settings.autoPlayAdhanAudio ? 'Enabled (آن)' : 'Disabled (بند)'}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-xl border border-gray-200">
+            <div>
+              <span className="text-xs font-bold text-gray-900 block">Adhan Time Notification</span>
+              <span className="text-[11px] text-gray-500">Shows system notification banner when Adhan time begins</span>
+            </div>
+            <button
+              onClick={() => updateSetting('notifyAdhan', !settings.notifyAdhan)}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                settings.notifyAdhan
+                  ? 'bg-[#075B3A] text-white shadow-sm'
+                  : 'bg-gray-200 text-gray-600'
+              }`}
+            >
+              {settings.notifyAdhan ? 'Enabled (آن)' : 'Disabled (بند)'}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-xl border border-gray-200">
+            <div>
+              <span className="text-xs font-bold text-gray-900 block">Namaz / Jama'at Time Notification</span>
+              <span className="text-[11px] text-gray-500">Shows reminder notification when the congregational Salah starts</span>
+            </div>
+            <button
+              onClick={() => updateSetting('notifyJamaat', !settings.notifyJamaat)}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                settings.notifyJamaat
+                  ? 'bg-[#075B3A] text-white shadow-sm'
+                  : 'bg-gray-200 text-gray-600'
+              }`}
+            >
+              {settings.notifyJamaat ? 'Enabled (آن)' : 'Disabled (بند)'}
+            </button>
           </div>
         </div>
 
-        {notificationPermission !== 'granted' ? (
+        {/* Live Notification Previews / Test Buttons */}
+        <div className="pt-3 border-t border-gray-100 flex flex-wrap gap-2">
           <button
-            onClick={handleRequestNotifications}
-            className="px-4 py-2 bg-[#D4AF37] text-[#043A25] font-bold text-xs rounded-xl hover:bg-[#AA8A22] transition-colors"
+            onClick={handleTestAdhanNotification}
+            className="flex items-center space-x-1.5 px-3.5 py-2 bg-[#E4F3EC] text-[#075B3A] hover:bg-[#d2ede0] text-xs font-bold rounded-xl border border-[#075B3A]/30 transition-all"
           >
-            Enable Notifications (اطلاعات آن کریں)
+            <Send className="w-3.5 h-3.5" />
+            <span>Test Adhan Alert (اذان ٹیسٹ)</span>
           </button>
-        ) : (
-          <span className="flex items-center space-x-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
-            <CheckCircle className="w-4 h-4" />
-            <span>Notifications Active</span>
-          </span>
-        )}
+          <button
+            onClick={handleTestJamaatNotification}
+            className="flex items-center space-x-1.5 px-3.5 py-2 bg-[#FFF9E6] text-[#AA8A22] hover:bg-[#faefcd] text-xs font-bold rounded-xl border border-[#D4AF37]/50 transition-all"
+          >
+            <Send className="w-3.5 h-3.5" />
+            <span>Test Namaz / Jamaat Alert (نماز ٹیسٹ)</span>
+          </button>
+        </div>
       </div>
 
       {/* 3. Individual Prayer Adhan Alarms */}
@@ -174,7 +294,7 @@ export const AdhanSettingsPage: React.FC = () => {
                 <span className="text-sm font-bold text-gray-900 block">
                   {prayer.name} ({prayer.arabicName})
                 </span>
-                <span className="text-xs text-gray-500">Official Adhan at {prayer.officialAdhanTime}</span>
+                <span className="text-xs text-gray-500">Official Adhan at {prayer.officialAdhanTime} | Jama'at at {prayer.jamaatTime}</span>
               </div>
               <button
                 onClick={() => toggleAlarm(prayer.name)}

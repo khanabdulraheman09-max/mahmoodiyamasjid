@@ -35,7 +35,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     { id: 'calendar', title: 'Islamic Calendar', desc: 'Hijri dates & moon sighting', icon: Calendar },
     { id: 'duas', title: 'Duas & Adhkar', desc: 'Authentic daily supplications', icon: Heart },
     { id: 'quiz', title: 'Islamic Quizzes', desc: 'Interactive Maktab learning', icon: HelpCircle },
-    { id: 'announcements', title: 'Masjid Notices', desc: 'Jumu\'ah & public updates', icon: Bell },
+    { id: 'announcements', title: 'Masjid Notices', desc: 'Public updates & notices', icon: Bell },
   ];
 
   return (
@@ -240,28 +240,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* 4. Jumu'ah Mubarak Banner */}
-      <div className="bg-gradient-to-r from-[#E4F3EC] to-white p-5 rounded-2xl border border-[#075B3A]/30 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-[#075B3A] block">
-            Weekly Blessed Congregation
-          </span>
-          <h4 className="text-lg font-bold text-[#075B3A]">
-            Jumu'ah Mubarak at Masjid Mehmoodiya
-          </h4>
-          <p className="text-xs text-gray-600 mt-0.5">
-            Bayan / Lecture: <strong>{currentSchedule.jumuahBayanTime}</strong> | Khutbah: <strong>{currentSchedule.jumuahKhutbahTime}</strong> | Jamaat: <strong className="text-[#075B3A]">{currentSchedule.jumuahJamaatTime}</strong>
-          </p>
-        </div>
-        <button
-          onClick={() => onNavigate('prayer_times')}
-          className="px-4 py-2 bg-[#075B3A] text-white text-xs font-bold rounded-xl hover:bg-[#043A25] transition-colors whitespace-nowrap shadow-sm"
-        >
-          View Friday Schedule
-        </button>
-      </div>
-
-      {/* 5. Quick Access Grid (8 Modules) */}
+      {/* 4. Quick Access Grid (8 Modules) */}
       <div>
         <h3 className="text-lg font-bold text-[#075B3A] mb-3 flex items-center space-x-2">
           <Sparkles className="w-4 h-4 text-[#D4AF37]" />
@@ -294,7 +273,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* 6. Daily Hadith & Latest Notice */}
+      {/* 5. Daily Hadith & Latest Notice */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Daily Reminder */}
         <div className="bg-gradient-to-br from-[#FFF9E6] to-white p-6 rounded-2xl border border-[#D4AF37]/50 shadow-sm">

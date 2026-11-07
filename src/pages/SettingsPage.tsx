@@ -164,7 +164,7 @@ export const SettingsPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-gray-100">
           <div className="text-[11px] text-gray-500 flex items-center space-x-1.5">
             <Radio className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-            <span>Automatic sync triggers on: App launch, App resume, Network reconnection, and every 5 mins.</span>
+            <span>Automatic sync triggers on: App launch, App resume, Network reconnection, every 1 min, and live real-time Firestore listeners.</span>
           </div>
 
           <button
@@ -257,6 +257,7 @@ export const SettingsPage: React.FC = () => {
                     <div>Oral Exams: <strong>{transferResult.counts.oral_examinations}</strong></div>
                     <div>Announcements: <strong>{transferResult.counts.announcements}</strong></div>
                     <div>Mosque Settings: <strong>{transferResult.counts.masjid_settings}</strong></div>
+                    <div>Prayer Schedules: <strong>{transferResult.counts.prayer_schedules || 0}</strong></div>
                   </div>
                 )}
               </div>

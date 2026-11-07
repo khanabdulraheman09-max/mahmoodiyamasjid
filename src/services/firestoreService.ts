@@ -97,6 +97,91 @@ export const FirestoreService = {
   },
 
   /**
+   * Save a single prayer time change (Adhan and Jamaat) directly to Firestore.
+   */
+  async savePrayerOverride(prayerName: string, adhan: string, jamaat: string): Promise<void> {
+    if (!isFirebaseConfigured() || !db) return;
+
+    try {
+      const todayKey = new Date().toISOString().split('T')[0];
+      const overridesRef = doc(db, 'prayer_schedules', 'latest_overrides');
+      const todayRef = doc(db, 'prayer_schedules', todayKey);
+
+      const payload = {
+        [prayerName]: { adhan, jamaat },
+        updatedAt: new Date().toISOString(),
+        updatedBy: 'Admin',
+      };
+
+      await Promise.all([
+        setDoc(overridesRef, payload, { merge: true }),
+        setDoc(todayRef, payload, { merge: true }),
+      ]);
+    } catch (err) {
+      console.error('Error saving prayer override to Firestore:', err);
+      throw err;
+    }
+  },
+
+  /**
+   * Save or seed the complete prayer schedule directly to Firestore.
+   */
+  async saveAllPrayerTimings(timings: Record<string, any>): Promise<void> {
+    if (!isFirebaseConfigured() || !db) {
+      throw new Error('Firebase is not yet configured.');
+    }
+
+    try {
+      const todayKey = new Date().toISOString().split('T')[0];
+      const overridesRef = doc(db, 'prayer_schedules', 'latest_overrides');
+      const todayRef = doc(db, 'prayer_schedules', todayKey);
+
+      const payload = {
+        ...timings,
+        updatedAt: new Date().toISOString(),
+        updatedBy: 'Admin',
+      };
+
+      await Promise.all([
+        setDoc(overridesRef, payload, { merge: true }),
+        setDoc(todayRef, payload, { merge: true }),
+      ]);
+    } catch (err) {
+      console.error('Error saving all prayer timings to Firestore:', err);
+      throw err;
+    }
+  },
+
+  /**
+   * Fetch current prayer overrides from Firestore.
+   */
+  async getPrayerOverrides(): Promise<Record<string, { adhan: string; jamaat: string }> | null> {
+    if (!isFirebaseConfigured() || !db) return null;
+
+    try {
+      const overridesRef = doc(db, 'prayer_schedules', 'latest_overrides');
+      const snap = await getDoc(overridesRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        const result: Record<string, { adhan: string; jamaat: string }> = {};
+        ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].forEach((p) => {
+          if (data[p] && typeof data[p] === 'object') {
+            result[p] = {
+              adhan: data[p].adhan || '',
+              jamaat: data[p].jamaat || '',
+            };
+          }
+        });
+        return result;
+      }
+      return null;
+    } catch (err) {
+      console.warn('Error fetching prayer overrides from Firestore:', err);
+      return null;
+    }
+  },
+
+  /**
    * Transfer / Seed existing Mosque data directly to Firebase Firestore.
    * Useful when user adds Firebase credentials to immediately sync all data.
    */
@@ -112,6 +197,7 @@ export const FirestoreService = {
       oral_examinations: 0,
       announcements: 0,
       masjid_settings: 0,
+      prayer_schedules: 0,
     };
 
     try {
@@ -170,11 +256,29 @@ export const FirestoreService = {
       );
       counts.masjid_settings = 1;
 
+      // 7. Transfer Official Prayer Timings & Adhan Times
+      const todayKey = new Date().toISOString().split('T')[0];
+      const defaultPrayerSchedule = {
+        Fajr: { adhan: '05:25 AM', jamaat: '05:50 AM' },
+        Dhuhr: { adhan: '12:30 PM', jamaat: '01:15 PM' },
+        Asr: { adhan: '04:35 PM', jamaat: '04:50 PM' },
+        Maghrib: { adhan: '06:00 PM', jamaat: '06:05 PM' },
+        Isha: { adhan: '08:15 PM', jamaat: '08:30 PM' },
+        sunriseTime: '06:30 AM',
+        updatedAt: new Date().toISOString(),
+        updatedBy: 'Abdur Rahman Khan',
+      };
+      const prayerOverridesRef = doc(db, 'prayer_schedules', 'latest_overrides');
+      batch.set(prayerOverridesRef, defaultPrayerSchedule, { merge: true });
+      const prayerTodayRef = doc(db, 'prayer_schedules', todayKey);
+      batch.set(prayerTodayRef, defaultPrayerSchedule, { merge: true });
+      counts.prayer_schedules = 2;
+
       await batch.commit();
 
       return {
         success: true,
-        message: 'All mosque records and settings were successfully transferred to Firebase Firestore!',
+        message: 'All mosque records, prayer times, and settings were successfully transferred to Firebase Firestore!',
         counts,
       };
     } catch (err: any) {

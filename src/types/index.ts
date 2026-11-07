@@ -25,9 +25,6 @@ export interface DailyPrayerSchedule {
   hijriDate: string;
   prayers: PrayerTimeItem[];
   sunriseTime: string;
-  jumuahBayanTime: string;
-  jumuahKhutbahTime: string;
-  jumuahJamaatTime: string;
   isOverridden?: boolean;
   lastUpdatedTimestamp?: number;
 }
@@ -124,3 +121,4 @@ export interface Announcement {
   date: string;
   postedBy: string;
 }
+
