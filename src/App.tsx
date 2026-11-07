@@ -22,7 +22,7 @@ const MainAppLayout: React.FC<{ onOpenAuth: () => void }> = ({ onOpenAuth }) => 
   const { currentTab, navigateTo } = useNavigation();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAF8] text-[#1A2420] pb-24 xl:pb-0">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col bg-[#F8FAF8] text-[#1A2420] pb-24 xl:pb-0">
       <Navbar
         currentTab={currentTab}
         setCurrentTab={(tab) => navigateTo(tab)}

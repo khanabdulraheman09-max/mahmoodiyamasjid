@@ -128,28 +128,25 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
   return (
     <>
       <header className="sticky top-0 z-40 bg-gradient-to-r from-[#043A25] via-[#075B3A] to-[#043A25] text-white shadow-md border-b border-[#D4AF37]/30 pt-safe">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 sm:h-20">
+        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-20">
             {/* Logo and Mosque Brand */}
             <div
-              className="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer group"
+              className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group min-w-0"
               onClick={() => {
                 setCurrentTab('dashboard');
                 setMobileMenuOpen(false);
               }}
             >
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white/10 p-1 border-2 border-[#D4AF37] shadow-inner flex items-center justify-center group-hover:scale-105 transition-transform">
-                <img src="/masjid-logo.svg" alt="Masjid Mehmoodiya" className="w-8 h-8 sm:w-10 sm:h-10" />
+              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-white/10 p-1 border border-[#D4AF37] sm:border-2 shadow-inner flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                <img src="/masjid-logo.svg" alt="Masjid Mehmoodiya" className="w-6 h-6 sm:w-9 sm:h-9" />
               </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold font-arabic text-[#D4AF37] leading-none tracking-wide">
+              <div className="min-w-0">
+                <div className="text-sm sm:text-2xl font-bold font-arabic text-[#D4AF37] leading-none tracking-wide truncate">
                   مسجد محمودیہ
                 </div>
-                <div className="text-xs sm:text-base font-bold tracking-tight text-white leading-tight">
+                <div className="text-xs sm:text-base font-bold tracking-tight text-white leading-tight truncate">
                   Masjid Mehmoodiya
-                </div>
-                <div className="text-[10px] text-emerald-200 hidden md:block">
-                  Darussalam Society, Sawangi
                 </div>
               </div>
             </div>
@@ -177,14 +174,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
             </nav>
 
             {/* Role Badge, Sync Status & Profile Actions */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
               {/* Online/Offline & Sync Status Badge */}
               <SyncStatusBadge />
 
               {/* Role Pill */}
               <button
                 onClick={() => setProfileModalOpen(true)}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
+                className={`flex items-center space-x-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-full border text-[11px] sm:text-xs font-semibold transition-all active:scale-95 ${
                   isAdmin
                     ? 'bg-amber-400/20 text-[#D4AF37] border-[#D4AF37] shadow-sm'
                     : isGuest
@@ -196,49 +193,35 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
                 {isAdmin ? (
                   <>
                     <ShieldCheck className="w-3.5 h-3.5 text-[#D4AF37]" />
-                    <span className="font-bold">Admin (Me)</span>
+                    <span className="font-bold">Admin</span>
                   </>
                 ) : isGuest ? (
                   <>
                     <UserCheck className="w-3.5 h-3.5 text-[#D4AF37]" />
-                    <span>Guest Mode</span>
+                    <span>Guest</span>
                   </>
                 ) : (
                   <>
                     <User className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>Visitor</span>
+                    <span>Member</span>
                   </>
                 )}
               </button>
-
-              {/* Quick Upgrade Button for Guest Mode */}
-              {isGuest && (
-                <button
-                  type="button"
-                  onClick={handleUpgrade}
-                  disabled={upgrading}
-                  className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-[#D4AF37] text-[#043A25] text-[11px] font-bold shadow-sm hover:bg-[#e0bc46] active:scale-95 transition-all disabled:opacity-60"
-                  title="Upgrade to permanent Google Account"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>{upgrading ? 'Upgrading...' : 'Upgrade'}</span>
-                </button>
-              )}
 
               {/* Direct Logout / Login Button */}
               {currentUser ? (
                 <button
                   onClick={handleLogout}
-                  className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-white/10 hover:bg-red-500/20 border border-white/20 hover:border-red-400/40 text-xs text-white/90 hover:text-red-200 transition-all flex items-center space-x-1"
+                  className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-white/10 hover:bg-red-500/20 border border-white/20 hover:border-red-400/40 text-xs text-white/90 hover:text-red-200 transition-all flex items-center space-x-1"
                   title="Log out and return to Login screen"
                 >
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden sm:inline">Logout</span>
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline text-xs">Logout</span>
                 </button>
               ) : (
                 <button
                   onClick={onOpenAuth}
-                  className="px-3 py-1.5 rounded-xl bg-[#D4AF37] text-[#043A25] text-xs font-bold shadow-md hover:bg-[#e0bc46] transition-all"
+                  className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-[#D4AF37] text-[#043A25] text-xs font-bold shadow-md hover:bg-[#e0bc46] transition-all"
                 >
                   Sign In
                 </button>
@@ -247,7 +230,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
               {/* Mobile Drawer Toggle */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="xl:hidden p-2 rounded-xl bg-white/10 text-white hover:bg-white/20"
+                className="xl:hidden p-1.5 sm:p-2 rounded-xl bg-white/10 text-white hover:bg-white/20"
                 aria-label="Toggle navigation menu"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -260,11 +243,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
         {mobileMenuOpen && (
           <div className="xl:hidden bg-[#043A25] border-t border-[#D4AF37]/20 px-4 pt-3 pb-6 space-y-1 shadow-2xl max-h-[calc(100vh-5rem)] overflow-y-auto">
             <div className="pb-2 mb-2 border-b border-white/10 flex items-center justify-between">
-              <span className="text-xs text-emerald-200 font-semibold">Active Role:</span>
+              <span className="text-xs text-emerald-200 font-semibold">Account:</span>
               <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                isAdmin ? 'bg-[#D4AF37] text-[#043A25]' : 'bg-white/20 text-white'
+                isAdmin
+                  ? 'bg-[#D4AF37] text-[#043A25]'
+                  : isGuest
+                  ? 'bg-amber-100 text-amber-900'
+                  : 'bg-white/20 text-white'
               }`}>
-                {isAdmin ? 'Admin (Editing Access)' : 'Visitor (Viewer Access)'}
+                {isAdmin ? 'Administrator' : isGuest ? 'Guest Access' : 'Community Member'}
               </span>
             </div>
 
@@ -309,10 +296,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-[#D4AF37]/50 text-gray-800 space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <div className="flex items-center space-x-2">
-                <ShieldCheck className="w-6 h-6 text-[#075B3A]" />
+                <User className="w-5 h-5 text-[#075B3A]" />
                 <div>
-                  <h3 className="text-base font-bold text-[#075B3A]">User Role & Permissions</h3>
-                  <p className="text-[11px] text-gray-500">Masjid Mehmoodiya Access Control</p>
+                  <h3 className="text-base font-bold text-[#075B3A]">Account Profile</h3>
+                  <p className="text-[11px] text-gray-500">Masjid Mehmoodiya Community</p>
                 </div>
               </div>
               <button
@@ -324,15 +311,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
             </div>
 
             {/* Current User Card */}
-            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-2">
+            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">Active Account:</span>
+                <span className="text-xs text-gray-500">Account:</span>
                 <span className="text-xs font-bold text-gray-900 truncate max-w-[200px]">
-                  {currentUser?.displayName || currentUser?.email || (isGuest ? 'Anonymous Guest' : 'Public Visitor')}
+                  {currentUser?.displayName || currentUser?.email || (isGuest ? 'Guest User' : 'Community Member')}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">Current Role:</span>
+                <span className="text-xs text-gray-500">Account Status:</span>
                 <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
                   isAdmin
                     ? 'bg-[#075B3A] text-white'
@@ -341,16 +328,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
                     : 'bg-emerald-100 text-[#075B3A]'
                 }`}>
                   {isAdmin
-                    ? '👑 ADMIN (Full Edit Access)'
+                    ? '👑 Administrator'
                     : isGuest
-                    ? '🌱 GUEST (Anonymous Public)'
-                    : '👤 VISITOR (View Only)'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">Sensitive Information:</span>
-                <span className="text-xs font-medium text-gray-700">
-                  {isAdmin ? 'Visible to you (Admin)' : 'Protected & Hidden'}
+                    ? '🌱 Guest Access'
+                    : '👤 Community Member'}
                 </span>
               </div>
             </div>
@@ -363,7 +344,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
                   <span>Upgrade to Google Account</span>
                 </div>
                 <p className="text-[11px] text-gray-600 leading-relaxed">
-                  You are currently in anonymous guest mode. Link your Google account to save preferences, receive announcements, and preserve your identity.
+                  You are currently using guest mode. Link your Google account to save preferences, receive community notices, and maintain your account.
                 </p>
                 {upgradeError && (
                   <p className="text-[11px] text-red-600 font-medium bg-red-50 p-2 rounded-lg border border-red-200">
@@ -395,81 +376,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
                 </button>
               </div>
             )}
-
-            {/* Firebase Role Sync Notice */}
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-xs text-amber-900 space-y-2">
-              <div className="font-bold flex items-center space-x-1.5">
-                <Sparkles className="w-4 h-4 text-amber-600" />
-                <span>How Admin Role Works with Firebase:</span>
-              </div>
-              <p className="text-[11px] text-amber-800 leading-relaxed">
-                When you sign up, your account starts as <strong>visitor</strong>. In your Firebase Console, open <code>Firestore &gt; users &gt; [your_uid]</code> and change <code>role</code> to <strong>admin</strong>.
-              </p>
-              <button
-                onClick={handleSyncRole}
-                disabled={syncingRole}
-                className="w-full py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 transition-all disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${syncingRole ? 'animate-spin' : ''}`} />
-                <span>{syncingRole ? 'Checking Firebase...' : 'Sync Role Now from Firebase'}</span>
-              </button>
-              {syncMessage && (
-                <p className="text-[11px] text-center font-bold text-emerald-800 pt-1">
-                  {syncMessage}
-                </p>
-              )}
-            </div>
-
-            {/* Quick Test Switcher (For local testing while setting up Firebase) */}
-            <div className="space-y-2 pt-1 border-t border-gray-100">
-              <span className="text-xs font-bold text-gray-600 block">
-                Quick Role Preview (Test All 3 Modes):
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRoleForTesting('admin');
-                    setProfileModalOpen(false);
-                  }}
-                  className={`py-2 px-1 text-center rounded-xl border text-xs font-bold transition-all ${
-                    isAdmin
-                      ? 'bg-[#075B3A] text-white border-[#075B3A]'
-                      : 'border-gray-200 hover:border-[#075B3A] text-gray-700'
-                  }`}
-                >
-                  👑 Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRoleForTesting('visitor');
-                    setProfileModalOpen(false);
-                  }}
-                  className={`py-2 px-1 text-center rounded-xl border text-xs font-bold transition-all ${
-                    isVisitor
-                      ? 'bg-[#075B3A] text-white border-[#075B3A]'
-                      : 'border-gray-200 hover:border-[#075B3A] text-gray-700'
-                  }`}
-                >
-                  👤 Visitor
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRoleForTesting('guest');
-                    setProfileModalOpen(false);
-                  }}
-                  className={`py-2 px-1 text-center rounded-xl border text-xs font-bold transition-all ${
-                    isGuest
-                      ? 'bg-[#075B3A] text-white border-[#075B3A]'
-                      : 'border-gray-200 hover:border-[#075B3A] text-gray-700'
-                  }`}
-                >
-                  🌱 Guest
-                </button>
-              </div>
-            </div>
 
             <div className="pt-2">
               <button

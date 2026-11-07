@@ -188,53 +188,34 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* 1. Firebase Firestore Database Transfer (Admin Feature) */}
-      <div className="bg-white rounded-3xl border-2 border-[#D4AF37]/40 shadow-sm p-6 space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start space-x-3">
-            <div className="p-3 rounded-2xl bg-amber-50 text-[#AA8A22] border border-amber-200">
-              <Database className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h3 className="text-base font-bold text-gray-900">Firebase Firestore Database Sync</h3>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  isConfigured ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                }`}>
-                  {isConfigured ? 'Firebase Active' : 'API Keys Pending in .env'}
-                </span>
+      {isAdmin && (
+        <div className="bg-white rounded-3xl border-2 border-[#D4AF37]/40 shadow-sm p-6 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start space-x-3">
+              <div className="p-3 rounded-2xl bg-amber-50 text-[#AA8A22] border border-amber-200">
+                <Database className="w-6 h-6" />
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Transfer all initial mock data (students, attendance, progress, oral exams, announcements, settings) into Cloud Firestore.
-              </p>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-base font-bold text-gray-900">Cloud Database Sync</h3>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    isConfigured ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {isConfigured ? 'Online' : 'Local Offline'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Synchronize mosque records, prayer configurations, and Maktab data to Cloud Firestore.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Environment File Instruction Box */}
-        <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 text-xs text-gray-700 space-y-2">
-          <div className="font-bold flex items-center space-x-1.5 text-gray-900">
-            <FileCode className="w-4 h-4 text-[#075B3A]" />
-            <span>Firebase Configuration (<code className="bg-white px-1.5 py-0.5 rounded border border-gray-300 font-mono text-[11px]">.env</code> file):</span>
-          </div>
-          <p className="text-[11px] text-gray-600 leading-relaxed">
-            Your <code className="font-bold">.env</code> template has been created in your project folder. Once you create your project in the Firebase Console, paste your web app credentials into <code className="font-mono bg-white px-1 rounded border">.env</code>:
-          </p>
-          <pre className="bg-gray-900 text-emerald-400 p-3 rounded-xl font-mono text-[11px] overflow-x-auto">
-{`VITE_FIREBASE_API_KEY=AIzaSy...
-VITE_FIREBASE_AUTH_DOMAIN=masjid-mehmoodiya.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=masjid-mehmoodiya
-VITE_FIREBASE_STORAGE_BUCKET=masjid-mehmoodiya.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=...
-VITE_FIREBASE_APP_ID=1:...`}
-          </pre>
-        </div>
-
-        {isAdmin ? (
           <div className="pt-2 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-bold text-gray-900 block">
-                  Seed / Transfer Database to Firestore
+                  Seed / Sync Database
                 </span>
                 <span className="text-[11px] text-gray-500">
                   Uploads complete records to your Firestore collections automatically.
@@ -248,7 +229,7 @@ VITE_FIREBASE_APP_ID=1:...`}
                 className="px-5 py-2.5 bg-gradient-to-r from-[#075B3A] to-[#043A25] hover:from-[#096d46] hover:to-[#075B3A] text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
               >
                 <CloudUpload className={`w-4 h-4 ${isTransferring ? 'animate-bounce' : ''}`} />
-                <span>{isTransferring ? 'Transferring Data...' : 'Transfer Database to Firebase'}</span>
+                <span>{isTransferring ? 'Syncing...' : 'Sync Database to Firebase'}</span>
               </button>
             </div>
 
@@ -281,13 +262,8 @@ VITE_FIREBASE_APP_ID=1:...`}
               </div>
             )}
           </div>
-        ) : (
-          <div className="bg-gray-50 p-3.5 rounded-2xl text-xs text-gray-500 flex items-center space-x-2">
-            <Shield className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            <span>Database synchronization is restricted to Mosque Administrator.</span>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 2. Mosque Coordinates & Location */}
       <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6 space-y-4">

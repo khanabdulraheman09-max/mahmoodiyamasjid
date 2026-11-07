@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "784920870780",
+    "project_id": "masjid-mehmodiya",
+    "storage_bucket": "masjid-mehmodiya.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:784920870780:android:36f649b3c9548c39",
+        "android_client_info": {
+          "package_name": "org.masjidmehmoodiya.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "784920870780-4d37n15p9kqj4i9aom8e05n7h33d98.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBAtEbVYzv8YiNq7EBg2QdZquCPFeGCXqw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "784920870780-4d37n15p9kqj4i9aom8e05n7h33d98.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

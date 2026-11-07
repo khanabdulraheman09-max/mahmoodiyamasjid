@@ -65,32 +65,32 @@ export const PrayerTimesPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* Toast */}
       {successToast && (
-        <div className="fixed top-24 right-4 z-50 bg-[#075B3A] text-white px-5 py-3 rounded-xl shadow-xl flex items-center space-x-2 border-2 border-[#D4AF37]">
-          <Check className="w-5 h-5 text-[#D4AF37]" />
-          <span className="text-sm font-bold">{successToast}</span>
+        <div className="fixed top-20 right-4 z-50 bg-[#075B3A] text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center space-x-2 border-2 border-[#D4AF37] text-xs font-bold">
+          <Check className="w-4 h-4 text-[#D4AF37]" />
+          <span>{successToast}</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-gray-200">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#075B3A] flex items-center space-x-2">
-            <Clock className="w-7 h-7 text-[#D4AF37]" />
+          <h2 className="text-xl sm:text-3xl font-extrabold text-[#075B3A] flex items-center space-x-2">
+            <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-[#D4AF37]" />
             <span>Salah & Jamaat Schedule</span>
           </h2>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Official congregational timetable for Masjid Mehmoodiya – Sawangi, Chhatrapati Sambhajinagar
+          <p className="text-[11px] sm:text-sm text-gray-500 mt-0.5">
+            Official congregational timetable for Masjid Mehmoodiya – Sawangi
           </p>
         </div>
 
         {/* Tab switch */}
-        <div className="flex items-center space-x-2 bg-gray-100 p-1 rounded-xl self-start md:self-auto">
+        <div className="flex items-center space-x-1 sm:space-x-2 bg-gray-100 p-1 rounded-xl overflow-x-auto max-w-full">
           <button
             onClick={() => setActiveTab('today')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'today' ? 'bg-[#075B3A] text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -98,40 +98,40 @@ export const PrayerTimesPage: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('weekly')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'weekly' ? 'bg-[#075B3A] text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            7-Day Timetable
+            7-Day
           </button>
           <button
             onClick={() => setActiveTab('monthly')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'monthly' ? 'bg-[#075B3A] text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            Monthly Calendar
+            Monthly
           </button>
           <button
             type="button"
             onClick={handleShareSchedule}
-            className="flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#E4F3EC] text-[#075B3A] hover:bg-[#d2ede0] border border-[#075B3A]/20 active:scale-95 transition-all"
+            className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-[#E4F3EC] text-[#075B3A] hover:bg-[#d2ede0] border border-[#075B3A]/20 active:scale-95 transition-all whitespace-nowrap"
             title="Share Today's Timetable"
           >
             <Share2 className="w-3.5 h-3.5" />
-            <span>Share</span>
+            <span className="hidden xs:inline">Share</span>
           </button>
         </div>
       </div>
 
       {/* Admin Notice */}
       {isAdmin && (
-        <div className="bg-[#FFF9E6] p-4 rounded-xl border border-[#D4AF37] flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-xs font-bold text-[#AA8A22]">
-            <ShieldAlert className="w-4 h-4" />
-            <span>ADMINISTRATOR MODE: You have permission to update and approve official Adhan & Jamaat timings.</span>
+        <div className="bg-[#FFF9E6] p-2.5 sm:p-3.5 rounded-xl border border-[#D4AF37] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-[11px] sm:text-xs">
+          <div className="flex items-center space-x-2 font-bold text-[#AA8A22]">
+            <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+            <span>Administrator Mode: You can edit and update official Adhan & Jamaat timings.</span>
           </div>
-          <span className="text-[11px] bg-[#D4AF37] text-[#043A25] font-bold px-2 py-0.5 rounded-full">
+          <span className="self-start sm:self-auto text-[10px] bg-[#D4AF37] text-[#043A25] font-bold px-2 py-0.5 rounded-full">
             {currentUser?.displayName || 'Admin'}
           </span>
         </div>
@@ -139,51 +139,69 @@ export const PrayerTimesPage: React.FC = () => {
 
       {/* Today View */}
       {activeTab === 'today' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="bg-[#075B3A] text-white px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#075B3A] text-white px-3.5 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <div>
-                <span className="text-xs text-[#D4AF37] font-bold uppercase tracking-wider">
+                <span className="text-[10px] sm:text-xs text-[#D4AF37] font-bold uppercase tracking-wider block">
                   {currentSchedule.hijriDate}
                 </span>
-                <h3 className="text-lg font-bold text-white">Daily Congregational Prayer Times</h3>
+                <h3 className="text-sm sm:text-lg font-bold text-white">Daily Prayer Times</h3>
               </div>
-              <span className="text-xs bg-white/10 px-3 py-1 rounded-full text-white font-mono">
+              <span className="text-[10px] sm:text-xs bg-white/10 px-2 sm:px-3 py-1 rounded-full text-white font-mono">
                 {currentSchedule.dateKey}
               </span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            {/* Single-view, 100% width, NO horizontal scroll needed */}
+            <div className="w-full">
+              <table className="w-full text-left border-collapse table-fixed">
                 <thead>
-                  <tr className="bg-[#E4F3EC] text-[#075B3A] text-xs uppercase tracking-wider font-bold">
-                    <th className="py-3 px-6">Salah</th>
-                    <th className="py-3 px-6">Official Adhan (اذان)</th>
-                    <th className="py-3 px-6">Jamaat Congregation (جماعت)</th>
-                    {isAdmin && <th className="py-3 px-6 text-right">Admin Action</th>}
+                  <tr className="bg-[#E4F3EC] text-[#075B3A] text-[10px] sm:text-xs uppercase tracking-wider font-bold border-b border-emerald-100">
+                    <th className={`py-2.5 px-2 sm:px-4 ${isAdmin ? 'w-[28%] sm:w-[26%]' : 'w-[34%]'}`}>
+                      Salah
+                    </th>
+                    <th className={`py-2.5 px-1.5 sm:px-4 ${isAdmin ? 'w-[28%] sm:w-[26%]' : 'w-[33%]'}`}>
+                      Adhan (اذان)
+                    </th>
+                    <th className={`py-2.5 px-1.5 sm:px-4 ${isAdmin ? 'w-[32%] sm:w-[34%]' : 'w-[33%]'}`}>
+                      Jama'at (جماعت)
+                    </th>
+                    {isAdmin && (
+                      <th className="py-2.5 px-1 sm:px-3 w-[12%] sm:w-[14%] text-center">
+                        Edit
+                      </th>
+                    )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 text-sm">
+                <tbody className="divide-y divide-gray-100 text-xs sm:text-sm">
                   {currentSchedule.prayers.map((prayer) => (
-                    <tr key={prayer.name} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-4 px-6">
-                        <div className="font-bold text-gray-900">{prayer.name}</div>
-                        <div className="text-xs font-arabic text-[#AA8A22]">{prayer.arabicName}</div>
+                    <tr key={prayer.name} className="hover:bg-gray-50/80 transition-colors">
+                      <td className="py-2.5 sm:py-3.5 px-2 sm:px-4">
+                        <div className="font-bold text-gray-900 text-xs sm:text-sm leading-tight truncate">
+                          {prayer.name}
+                        </div>
+                        <div className="text-[10px] sm:text-xs font-arabic text-[#AA8A22] leading-tight">
+                          {prayer.arabicName}
+                        </div>
                       </td>
-                      <td className="py-4 px-6 font-semibold text-gray-800">{prayer.officialAdhanTime}</td>
-                      <td className="py-4 px-6">
-                        <span className="inline-block bg-[#075B3A] text-white font-bold text-xs px-3 py-1 rounded-lg shadow-sm">
+                      <td className="py-2.5 sm:py-3.5 px-1.5 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm whitespace-nowrap">
+                        {prayer.officialAdhanTime}
+                      </td>
+                      <td className="py-2.5 sm:py-3.5 px-1.5 sm:px-4">
+                        <span className="inline-block bg-[#075B3A] text-white font-bold text-[10px] sm:text-xs px-2 sm:px-2.5 py-1 rounded-md sm:rounded-lg shadow-xs whitespace-nowrap">
                           {prayer.jamaatTime}
                         </span>
                       </td>
                       {isAdmin && (
-                        <td className="py-4 px-6 text-right">
+                        <td className="py-2.5 sm:py-3.5 px-1 sm:px-3 text-center">
                           <button
+                            type="button"
                             onClick={() => handleOpenEdit(prayer)}
-                            className="p-1.5 rounded-lg text-[#075B3A] hover:bg-[#E4F3EC] transition-colors"
-                            title="Edit official timings"
+                            className="p-1.5 rounded-lg bg-[#E4F3EC] text-[#075B3A] hover:bg-[#075B3A] hover:text-white transition-all active:scale-90"
+                            title={`Edit ${prayer.name} timings`}
                           >
-                            <Edit3 className="w-4 h-4" />
+                            <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </button>
                         </td>
                       )}
@@ -193,37 +211,37 @@ export const PrayerTimesPage: React.FC = () => {
               </table>
             </div>
 
-            <div className="bg-gray-50 px-6 py-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+            <div className="bg-gray-50 px-3.5 sm:px-6 py-2.5 sm:py-3 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between text-[11px] sm:text-xs text-gray-500 gap-1">
               <div className="flex items-center space-x-1.5">
-                <Info className="w-4 h-4 text-emerald-600" />
-                <span>Sunrise (Ishraq begins): <strong>{currentSchedule.sunriseTime}</strong></span>
+                <Info className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                <span>Sunrise (Ishraq): <strong>{currentSchedule.sunriseTime}</strong></span>
               </div>
-              <span>Darussalam Society, Sawangi</span>
+              <span className="text-[10px] sm:text-xs text-gray-400">Darussalam Society, Sawangi</span>
             </div>
           </div>
 
           {/* Jumu'ah Mubarak Full Details */}
-          <div className="bg-gradient-to-r from-[#FFF9E6] to-white p-6 rounded-2xl border border-[#D4AF37]/50 shadow-sm">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <span className="text-xs font-bold text-[#AA8A22] uppercase tracking-wider block">
+          <div className="bg-gradient-to-r from-[#FFF9E6] to-white p-4 sm:p-6 rounded-2xl border border-[#D4AF37]/50 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="w-full">
+                <span className="text-[10px] sm:text-xs font-bold text-[#AA8A22] uppercase tracking-wider block">
                   Friday Congregational Service
                 </span>
-                <h4 className="text-xl font-bold text-[#075B3A] mt-0.5">
+                <h4 className="text-base sm:text-xl font-bold text-[#075B3A] mt-0.5">
                   Jumu'ah Prayer Schedule
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 text-sm">
-                  <div className="bg-white p-3 rounded-xl border border-gray-200">
-                    <span className="text-xs text-gray-500 block">Bayan (Lecture):</span>
-                    <strong className="text-[#075B3A]">{currentSchedule.jumuahBayanTime}</strong>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mt-2.5 text-xs sm:text-sm">
+                  <div className="bg-white p-2.5 sm:p-3 rounded-xl border border-gray-200">
+                    <span className="text-[10px] sm:text-xs text-gray-500 block">Bayan (Lecture):</span>
+                    <strong className="text-[#075B3A] text-xs sm:text-sm">{currentSchedule.jumuahBayanTime}</strong>
                   </div>
-                  <div className="bg-white p-3 rounded-xl border border-gray-200">
-                    <span className="text-xs text-gray-500 block">Arabic Khutbah:</span>
-                    <strong className="text-[#075B3A]">{currentSchedule.jumuahKhutbahTime}</strong>
+                  <div className="bg-white p-2.5 sm:p-3 rounded-xl border border-gray-200">
+                    <span className="text-[10px] sm:text-xs text-gray-500 block">Arabic Khutbah:</span>
+                    <strong className="text-[#075B3A] text-xs sm:text-sm">{currentSchedule.jumuahKhutbahTime}</strong>
                   </div>
-                  <div className="bg-white p-3 rounded-xl border border-[#D4AF37]">
-                    <span className="text-xs text-[#AA8A22] block font-semibold">Jamaat Congregation:</span>
-                    <strong className="text-base text-[#075B3A]">{currentSchedule.jumuahJamaatTime}</strong>
+                  <div className="bg-white p-2.5 sm:p-3 rounded-xl border border-[#D4AF37]">
+                    <span className="text-[10px] sm:text-xs text-[#AA8A22] block font-semibold">Jamaat Congregation:</span>
+                    <strong className="text-xs sm:text-base text-[#075B3A]">{currentSchedule.jumuahJamaatTime}</strong>
                   </div>
                 </div>
               </div>

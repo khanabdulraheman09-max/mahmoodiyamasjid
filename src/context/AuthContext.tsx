@@ -3,12 +3,17 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithCredential,
   signInAnonymously,
   linkWithPopup,
+  linkWithCredential,
   signOut,
   onAuthStateChanged,
+  GoogleAuthProvider,
   User as FirebaseUser,
 } from 'firebase/auth';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { auth, googleProvider, isFirebaseConfigured } from '../services/firebase';
 import { FirestoreService } from '../services/firestoreService';
 import { AuthSessionRepository } from '../services/repositories';
@@ -217,15 +222,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   /**
    * Option 2: Sign in / Sign up with Google
+   * - On Native Android (APK): Uses @capacitor-firebase/authentication native Google Sign-In
+   *   then authenticates the Firebase JS SDK via signInWithCredential()
+   * - On Web (Firebase Hosting): Uses signInWithPopup()
    */
   const loginWithGoogle = async (): Promise<void> => {
     clearAuthError();
     setIsLoading(true);
 
     try {
-      if (isFirebaseConfigured() && auth && googleProvider) {
-        const result = await signInWithPopup(auth, googleProvider);
-        const fbUser = result.user;
+      if (isFirebaseConfigured() && auth) {
+        let fbUser: FirebaseUser;
+
+        if (Capacitor.isNativePlatform()) {
+          // 1. Native Android Google Sign-In
+          const result = await FirebaseAuthentication.signInWithGoogle();
+          const idToken = result.credential?.idToken;
+          if (!idToken) {
+            throw new Error('Google native authentication failed: Missing ID token.');
+          }
+          const credential = GoogleAuthProvider.credential(idToken, result.credential?.accessToken);
+          const userCredential = await signInWithCredential(auth, credential);
+          fbUser = userCredential.user;
+        } else {
+          // 2. Web fallback
+          if (!googleProvider) {
+            throw new Error('Google authentication provider is not configured.');
+          }
+          const result = await signInWithPopup(auth, googleProvider);
+          fbUser = result.user;
+        }
 
         let profile = await FirestoreService.getUserProfile(fbUser.uid);
         if (!profile) {
@@ -266,8 +292,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.error('Google sign-in error:', err);
       let message = err.message || 'Google sign-in was cancelled or failed.';
-      if (err.code === 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/popup-closed-by-user' || err.message?.includes('popup-closed')) {
         message = 'Google sign-in window was closed.';
+      } else if (err.message?.includes('12501') || err.message?.includes('Sign in canceled')) {
+        message = 'Google sign-in was canceled.';
       }
       setAuthError(message);
       throw err;
@@ -278,31 +306,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   /**
    * Upgrade Guest Account to Google Account via Firebase Account Linking
+   * - Native Android: linkWithCredential() with fallback to signInWithCredential()
+   * - Web: linkWithPopup() with fallback to signInWithPopup()
    */
   const upgradeGuestWithGoogle = async (): Promise<void> => {
     clearAuthError();
     setIsLoading(true);
 
     try {
-      if (isFirebaseConfigured() && auth && googleProvider) {
+      if (isFirebaseConfigured() && auth) {
         if (!auth.currentUser || !auth.currentUser.isAnonymous) {
-          // If not currently an anonymous user, proceed with standard Google login
           await loginWithGoogle();
           return;
         }
 
         let fbUser: FirebaseUser;
-        try {
-          // 1. Link anonymous user credentials to Google provider
-          const linkResult = await linkWithPopup(auth.currentUser, googleProvider);
-          fbUser = linkResult.user;
-        } catch (linkErr: any) {
-          if (linkErr.code === 'auth/credential-already-in-use') {
-            // Google account is already registered to another user; sign in directly with that account
-            const credResult = await signInWithPopup(auth, googleProvider);
-            fbUser = credResult.user;
-          } else {
-            throw linkErr;
+
+        if (Capacitor.isNativePlatform()) {
+          const result = await FirebaseAuthentication.signInWithGoogle();
+          const idToken = result.credential?.idToken;
+          if (!idToken) {
+            throw new Error('Google native authentication failed: Missing ID token.');
+          }
+          const credential = GoogleAuthProvider.credential(idToken, result.credential?.accessToken);
+
+          try {
+            const linkResult = await linkWithCredential(auth.currentUser, credential);
+            fbUser = linkResult.user;
+          } catch (linkErr: any) {
+            if (linkErr.code === 'auth/credential-already-in-use') {
+              const credResult = await signInWithCredential(auth, credential);
+              fbUser = credResult.user;
+            } else {
+              throw linkErr;
+            }
+          }
+        } else {
+          if (!googleProvider) {
+            throw new Error('Google authentication provider is not configured.');
+          }
+          try {
+            const linkResult = await linkWithPopup(auth.currentUser, googleProvider);
+            fbUser = linkResult.user;
+          } catch (linkErr: any) {
+            if (linkErr.code === 'auth/credential-already-in-use') {
+              const credResult = await signInWithPopup(auth, googleProvider);
+              fbUser = credResult.user;
+            } else {
+              throw linkErr;
+            }
           }
         }
 
@@ -331,7 +383,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsOfflineSession(false);
         await AuthSessionRepository.saveSession(upgradedUser, await fbUser.getIdToken());
       } else {
-        // Demo fallback
         const upgradedDemo: AuthUser = {
           uid: currentUser?.uid || `upgraded_${Date.now()}`,
           email: 'member@gmail.com',
@@ -346,7 +397,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.error('Account upgrade error:', err);
       let msg = err.message || 'Failed to upgrade to Google account.';
-      if (err.code === 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/popup-closed-by-user' || err.message?.includes('popup-closed')) {
         msg = 'Google account selection window was closed.';
       }
       setAuthError(msg);
@@ -481,6 +532,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const logout = async (): Promise<void> => {
     try {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await FirebaseAuthentication.signOut();
+        } catch (nativeSignOutErr) {
+          console.warn('Native sign out error:', nativeSignOutErr);
+        }
+      }
       if (isFirebaseConfigured() && auth) {
         await signOut(auth);
       }

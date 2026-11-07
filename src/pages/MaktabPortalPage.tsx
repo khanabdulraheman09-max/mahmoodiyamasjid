@@ -284,7 +284,7 @@ export const MaktabPortalPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* Toast Notification */}
       {successToast && (
         <div className="fixed top-24 right-4 z-50 bg-[#075B3A] text-white px-5 py-3 rounded-xl shadow-xl flex items-center space-x-2 border-2 border-[#D4AF37] animate-bounce">

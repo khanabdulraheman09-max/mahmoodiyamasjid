@@ -39,7 +39,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
       {/* 1. Date & Time Bar */}
       <div className="bg-gradient-to-r from-[#FFF9E6] via-white to-[#FFF9E6] p-4 rounded-2xl border border-[#D4AF37]/40 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
         <div>
