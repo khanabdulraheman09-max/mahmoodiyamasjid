@@ -7,27 +7,27 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:784920870780:android:36f649b3c9548c39",
+        "mobilesdk_app_id": "1:784920870780:android:fbbf970fff7036ea772ef9",
         "android_client_info": {
           "package_name": "org.masjidmehmoodiya.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "784920870780-4d37n15p9kqj4i9aom8e05n7h33d98.apps.googleusercontent.com",
+          "client_id": "784920870780-k0sml3vqoece2m3s4vo7jqas0koecis0.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBAtEbVYzv8YiNq7EBg2QdZquCPFeGCXqw"
+          "current_key": "AIzaSyCeYGGhOzvNXMhW_IgPmKT9TwU62Os7e1c"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "784920870780-4d37n15p9kqj4i9aom8e05n7h33d98.apps.googleusercontent.com",
+              "client_id": "784920870780-k0sml3vqoece2m3s4vo7jqas0koecis0.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
