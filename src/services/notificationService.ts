@@ -8,6 +8,14 @@ export interface NotificationSettings {
   jamaatLeadMinutes: number;
 }
 
+export interface PrayerAlertPayload {
+  type: 'adhan' | 'namaz' | 'pre_jamaat';
+  prayerName: string;
+  time: string;
+  isPlayingAudio: boolean;
+  timestamp: number;
+}
+
 const SETTINGS_KEY = 'masjid_notification_settings';
 
 export class NotificationService {
@@ -77,6 +85,22 @@ export class NotificationService {
   }
 
   /**
+   * Stop any playing audio immediately
+   */
+  static stopSound(): void {
+    WebAudioService.stop();
+  }
+
+  /**
+   * Broadcast an in-app popup modal event so all screens can show the popup & STOP SOUND button
+   */
+  static dispatchInAppAlert(payload: PrayerAlertPayload): void {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('masjid:prayer-alert', { detail: payload }));
+    }
+  }
+
+  /**
    * Send a system / browser notification with fallback to service worker
    */
   private static async sendNotification(title: string, options: NotificationOptions): Promise<void> {
@@ -85,7 +109,7 @@ export class NotificationService {
     }
 
     try {
-      // Prefer service worker registration if available (works best on Android PWAs)
+      // Prefer service worker registration if available (works best on Android PWAs & FCM)
       if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.ready.catch(() => null);
         if (registration && typeof registration.showNotification === 'function') {
@@ -95,22 +119,31 @@ export class NotificationService {
       }
 
       // Fallback to standard window Notification
-      new Notification(title, options);
+      const n = new Notification(title, options);
+      n.onclick = () => {
+        window.focus();
+        n.close();
+      };
     } catch (err) {
       console.warn('Error displaying notification:', err);
     }
   }
 
   /**
-   * Trigger Adhan alert: plays vocal Adhan audio and displays notification
+   * Trigger Adhan alert:
+   * 1. Plays vocal Adhan audio if enabled
+   * 2. Shows in-app Popup Modal with STOP SOUND button
+   * 3. Displays system / mobile notification
    */
   static async triggerAdhan(prayerName: string, adhanTime: string): Promise<void> {
     const settings = this.getSettings();
 
     // 1. Play authentic vocal Adhan audio if enabled
+    let isPlaying = false;
     if (settings.autoPlayAdhanAudio) {
       try {
         WebAudioService.playAdhan('/audio/adhan.mp3');
+        isPlaying = true;
       } catch (err) {
         console.warn('Auto Adhan playback failed:', err);
       }
@@ -119,10 +152,19 @@ export class NotificationService {
     // 2. Trigger native haptic vibration
     NativeService.hapticSuccess();
 
-    // 3. Show Adhan notification if enabled
+    // 3. Immediately dispatch in-app Popup Modal with STOP SOUND button
+    this.dispatchInAppAlert({
+      type: 'adhan',
+      prayerName,
+      time: adhanTime,
+      isPlayingAudio: isPlaying,
+      timestamp: Date.now(),
+    });
+
+    // 4. Show Adhan notification if enabled
     if (settings.notifyAdhan && this.getPermission() === 'granted') {
       await this.sendNotification(`🕌 ${prayerName} Adhan (اذان کا وقت)`, {
-        body: `Allahu Akbar! The official Adhan time for ${prayerName} is now (${adhanTime}) at Masjid Mehmoodiya – Sawangi.`,
+        body: `Allahu Akbar! The official Adhan time for ${prayerName} is now (${adhanTime}) at Masjid Mehmoodiya – Sawangi. Click to open and control sound.`,
         icon: '/masjid-logo.svg',
         badge: '/masjid-logo.svg',
         tag: `adhan_${prayerName.toLowerCase()}`,
@@ -132,13 +174,24 @@ export class NotificationService {
   }
 
   /**
-   * Trigger Jamaat / Namaz alert: displays congregational prayer notification
+   * Trigger Jamaat / Namaz alert:
+   * 1. Shows in-app Popup Modal for Jama'at prayer
+   * 2. Displays congregational prayer notification
    */
   static async triggerJamaat(prayerName: string, jamaatTime: string): Promise<void> {
     const settings = this.getSettings();
 
     // Native haptic vibration
     NativeService.hapticSuccess();
+
+    // Immediately dispatch in-app Popup Modal
+    this.dispatchInAppAlert({
+      type: 'namaz',
+      prayerName,
+      time: jamaatTime,
+      isPlayingAudio: false,
+      timestamp: Date.now(),
+    });
 
     // Show Jamaat notification if enabled
     if (settings.notifyJamaat && this.getPermission() === 'granted') {
@@ -157,6 +210,14 @@ export class NotificationService {
    */
   static async triggerPreJamaatReminder(prayerName: string, minutesRemaining: number, jamaatTime: string): Promise<void> {
     NativeService.hapticMedium();
+
+    this.dispatchInAppAlert({
+      type: 'pre_jamaat',
+      prayerName,
+      time: jamaatTime,
+      isPlayingAudio: false,
+      timestamp: Date.now(),
+    });
 
     if (this.getPermission() === 'granted') {
       await this.sendNotification(`⏰ ${minutesRemaining} mins to ${prayerName} Jama'at`, {

@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from './context/AuthContext';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { NativeService } from './services/nativeService';
+import { FCMService } from './services/fcmService';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { PrayerAlertModal } from './components/PrayerAlertModal';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { PrayerTimesPage } from './pages/PrayerTimesPage';
@@ -23,6 +25,9 @@ const MainAppLayout: React.FC<{ onOpenAuth: () => void }> = ({ onOpenAuth }) => 
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col bg-[#F8FAF8] text-[#1A2420] pb-24 xl:pb-0">
+      {/* Global In-App Prayer Alert Popup & Persistent Sound Controller */}
+      <PrayerAlertModal />
+
       <Navbar
         currentTab={currentTab}
         setCurrentTab={(tab) => navigateTo(tab)}
@@ -55,15 +60,18 @@ export const App: React.FC = () => {
   const { currentUser, isLoading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
 
-  // Initialize native status bar and hide splash screen once auth loading finishes
+  // Initialize native status bar, splash screen, and FCM push notifications
   useEffect(() => {
     NativeService.init();
     if (!isLoading) {
       NativeService.hideSplash();
+      FCMService.init(currentUser?.uid).catch((err) =>
+        console.log('[App] FCM initialization notice:', err)
+      );
     }
-  }, [isLoading]);
+  }, [isLoading, currentUser]);
 
-  // Directly navigate to Login / Signup page if user has not logged in yet
+  // Loading Screen
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#032316] flex flex-col items-center justify-center space-y-4 pt-safe pb-safe">
